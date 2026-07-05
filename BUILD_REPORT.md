@@ -1,11 +1,36 @@
-# Aster Code v0.1.0 Security Audit Build Report
+# Aster Code v0.1.0 Local Persistence Stabilization Build Report
 
 Date: 2026-07-05
 Status: SUCCESS — All builds + smoke tests pass
 
 ## Changes Made
 
-### 1. Security Audit (`docs/SECURITY_AUDIT_REPORT.md`)
+### 1. Storage Helper (`apps/web/src/lib/storage.ts`)
+- Namespaced `aster-code:` prefix for all localStorage keys
+- Methods: `get()`, `set()`, `remove()`, `getJson()`, `setJson()`, `has()`, `listKeys()`, `resetAll()`, `clearOldKeys()`
+- Automatic migration from old `aster_` prefixed keys to `aster-code:` namespace
+- All operations wrapped in try/catch (graceful degradation if localStorage unavailable)
+- Migration version tracking via `aster-code:storage-version`
+
+### 2. Migrated All LocalStorage Usage
+- **WelcomeBanner.tsx** — `welcome-dismissed` key via storage helper
+- **App.tsx** — `auto-refresh`, `auto-refresh-interval` via storage helper
+- **SettingsScreen.tsx** — `system-prompts`, `selected-prompt-id`, `provider-configs` via storage helper
+- Fixed `loadPrompts` regression: restored key-existence check (not array length)
+
+### 3. Reset Local Data (`apps/web/src/screens/SettingsScreen.tsx`)
+- "Reset All Local Data" button in Settings > Runtime Server
+- Confirmation dialog before clearing all `aster-code:*` keys
+- Page reload after reset to restore defaults
+
+### 4. Documentation (`docs/LOCAL_PERSISTENCE.md`)
+- Complete persistence reference: storage keys, types, migration, reset behavior
+- Documents what IS and IS NOT stored (API keys, tokens, chat history)
+- Notes non-persisted fields: selectedModelId, activeTab
+
+---
+
+### Prior Changes
 - Comprehensive secret pattern search: `ghp_`, `sk-`, `OPENAI_API_KEY`, `client_secret`, etc. — none found
 - Frontend audit: no hardcoded keys, localStorage scrubs API keys before writing
 - Electron audit: `contextIsolation: true`, `nodeIntegration: false`, minimal preload IPC

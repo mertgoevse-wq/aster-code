@@ -9,6 +9,7 @@ import SkillsScreen from './screens/SkillsScreen.tsx';
 import SettingsScreen from './screens/SettingsScreen.tsx';
 import { ModelMetadata, ProviderInfo, ProviderConfigs } from '@aster-code/shared';
 import { apiFetch } from './api.ts';
+import { storage } from './lib/storage.ts';
 
 interface CacheStatus {
   isRefreshing: boolean;
@@ -29,10 +30,10 @@ export default function App() {
 
   // Auto-refresh config
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(() => {
-    return localStorage.getItem('aster_auto_refresh') !== 'false';
+    return storage.get('auto-refresh', '') !== 'false';
   });
   const [autoRefreshIntervalS, setAutoRefreshIntervalS] = useState(() => {
-    const saved = localStorage.getItem('aster_auto_refresh_interval');
+    const saved = storage.get('auto-refresh-interval', '');
     return saved ? parseInt(saved, 10) : 300;
   });
 
@@ -143,12 +144,12 @@ export default function App() {
 
   const handleAutoRefreshToggle = (enabled: boolean) => {
     setAutoRefreshEnabled(enabled);
-    localStorage.setItem('aster_auto_refresh', String(enabled));
+    storage.set('auto-refresh', String(enabled));
   };
 
   const handleAutoRefreshInterval = (seconds: number) => {
     setAutoRefreshIntervalS(seconds);
-    localStorage.setItem('aster_auto_refresh_interval', String(seconds));
+    storage.set('auto-refresh-interval', String(seconds));
   };
 
   // Listen for Electron runtime status changes

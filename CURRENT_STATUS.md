@@ -132,3 +132,7 @@ aster-code/
 | 23 | Reset onboarding from Settings? | ✅ Yes — "Show Again" button in Settings > Runtime Server |
 | 24 | What Works Now has 7 items? | ✅ Yes — desktop, runtime, agent, skills, workbench, models, prompts |
 | 25 | Coming Next has 6 items? | ✅ Yes — LLM, file edits, commands, MCP, sessions, OAuth |
+| 26 | LocalStorage namespaced (`aster-code:*`)? | ✅ Yes — 6 keys migrated, auto-migration from old keys |
+| 27 | `loadPrompts` key-existence preserved? | ✅ Yes — uses `storage.has()` not array length |
+| 28 | Reset local data from Settings? | ✅ Yes — confirmation dialog, clears all `aster-code:*` keys |
+| 29 | No secrets in localStorage? | ✅ Yes — API keys scrubbed before save, documented in `LOCAL_PERSISTENCE.md` |

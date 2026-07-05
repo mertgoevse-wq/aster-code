@@ -7,9 +7,10 @@ import {
 import { SystemPromptTemplate, ProviderConfigs } from '@aster-code/shared';
 import { apiFetch } from '../api.ts';
 import { resetWelcome, hasDismissedWelcome } from '../components/WelcomeBanner.tsx';
+import { storage } from '../lib/storage.ts';
 
-const PROMPTS_STORAGE_KEY = 'aster_system_prompts';
-const SELECTED_PROMPT_KEY = 'aster_selected_prompt_id';
+const PROMPTS_STORAGE_KEY = 'system-prompts';
+const SELECTED_PROMPT_KEY = 'selected-prompt-id';
 
 interface SettingsScreenProps {
   runtimeConnected: boolean;
@@ -53,36 +54,33 @@ function getDefaultPrompts(): SystemPromptTemplate[] {
 }
 
 function loadPrompts(): SystemPromptTemplate[] {
-  try {
-    const raw = localStorage.getItem(PROMPTS_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as SystemPromptTemplate[];
-      // Migrate old prompts without tags/updatedAt
-      return parsed.map(p => ({
-        ...p,
-        tags: Array.isArray(p.tags) ? p.tags : [],
-        updatedAt: p.updatedAt || p.createdAt,
-      }));
-    }
-  } catch { /* ignore */ }
+  if (storage.has(PROMPTS_STORAGE_KEY)) {
+    const parsed = storage.getJson<SystemPromptTemplate[]>(PROMPTS_STORAGE_KEY, []);
+    // Migrate old prompts without tags/updatedAt
+    return parsed.map(p => ({
+      ...p,
+      tags: Array.isArray(p.tags) ? p.tags : [],
+      updatedAt: p.updatedAt || p.createdAt,
+    }));
+  }
   const defaults = getDefaultPrompts();
-  localStorage.setItem(PROMPTS_STORAGE_KEY, JSON.stringify(defaults));
+  storage.setJson(PROMPTS_STORAGE_KEY, defaults);
   return defaults;
 }
 
 function savePrompts(prompts: SystemPromptTemplate[]): void {
-  localStorage.setItem(PROMPTS_STORAGE_KEY, JSON.stringify(prompts));
+  storage.setJson(PROMPTS_STORAGE_KEY, prompts);
 }
 
 export function getSelectedPromptId(): string | null {
-  return localStorage.getItem(SELECTED_PROMPT_KEY);
+  return storage.get(SELECTED_PROMPT_KEY, '') || null;
 }
 
 export function setSelectedPromptId(id: string | null): void {
   if (id) {
-    localStorage.setItem(SELECTED_PROMPT_KEY, id);
+    storage.set(SELECTED_PROMPT_KEY, id);
   } else {
-    localStorage.removeItem(SELECTED_PROMPT_KEY);
+    storage.remove(SELECTED_PROMPT_KEY);
   }
 }
 
@@ -192,10 +190,9 @@ export default function SettingsScreen({ runtimeConnected, onUpdateConfigs }: Se
   // Load provider configs on mount
   useEffect(() => {
     const loadData = async () => {
-      const savedConfig = localStorage.getItem('aster_provider_configs');
-      let localConfigs: ProviderConfigs | null = null;
-      if (savedConfig) {
-        try { localConfigs = JSON.parse(savedConfig); setConfigs(prev => ({ ...prev, ...localConfigs })); } catch { /* ignore */ }
+      const localConfigs = storage.getJson<ProviderConfigs | null>('provider-configs', null);
+      if (localConfigs) {
+        setConfigs(prev => ({ ...prev, ...localConfigs }));
       }
       if (runtimeConnected) {
         try {
@@ -378,7 +375,7 @@ export default function SettingsScreen({ runtimeConnected, onUpdateConfigs }: Se
       delete storageConfigs.openrouterApiKey;
       delete storageConfigs.nvidiaApiKey;
       delete storageConfigs.openaiCompatibleApiKey;
-      localStorage.setItem('aster_provider_configs', JSON.stringify(storageConfigs));
+      storage.setJson('provider-configs', storageConfigs);
       const success = await onUpdateConfigs(configs);
       setSaveStatus(success ? 'success' : 'error');
     } catch {
@@ -506,6 +503,25 @@ export default function SettingsScreen({ runtimeConnected, onUpdateConfigs }: Se
                 It runs on <code className="bg-ivory-100 px-1 rounded text-[9px]">localhost:3001</code>.
                 In the desktop app, it starts automatically. In the browser, start it with <code className="bg-ivory-100 px-1 rounded text-[9px]">npm run dev:runtime</code>.
               </span>
+            </div>
+
+            {/* Reset local data */}
+            <div className="text-[10px] leading-relaxed text-ivory-500 bg-ivory-50/50 p-3 border border-ivory-100 rounded-lg space-y-2">
+              <span className="font-semibold text-ivory-600 block">🗑️ Reset Local App Data</span>
+              <p className="text-ivory-400">
+                Clears all locally stored preferences: auto-refresh settings, provider configs (non-key fields only), system prompts, and onboarding state. API keys are never stored locally.
+              </p>
+              <button
+                onClick={() => {
+                  if (window.confirm('Reset all local Aster Code app data? This will not affect your project files or runtime server settings.')) {
+                    storage.resetAll();
+                    window.location.reload();
+                  }
+                }}
+                className="text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 px-3 py-1.5 rounded-lg transition-all"
+              >
+                Reset All Local Data
+              </button>
             </div>
 
             {/* Reset onboarding */}

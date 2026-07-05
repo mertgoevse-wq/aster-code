@@ -4,19 +4,20 @@ import {
   MessageSquare, Play, Award,
   Server, Shield, Lightbulb, Sparkles, Wrench
 } from 'lucide-react';
+import { storage } from '../lib/storage.ts';
 
-const DISMISSED_KEY = 'aster_welcome_dismissed';
+const DISMISSED_KEY = 'welcome-dismissed';
 
 export function hasDismissedWelcome(): boolean {
-  return localStorage.getItem(DISMISSED_KEY) === 'true';
+  return storage.get(DISMISSED_KEY, '') === 'true';
 }
 
 export function dismissWelcome(): void {
-  localStorage.setItem(DISMISSED_KEY, 'true');
+  storage.set(DISMISSED_KEY, 'true');
 }
 
 export function resetWelcome(): void {
-  localStorage.removeItem(DISMISSED_KEY);
+  storage.remove(DISMISSED_KEY);
 }
 
 interface WelcomeBannerProps {
