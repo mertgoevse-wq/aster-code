@@ -242,6 +242,23 @@ export default function App() {
           onAutoRefreshInterval={handleAutoRefreshInterval}
         />
       }
+      statusbar={
+        <div className="h-7 border-t border-ivory-200 bg-ivory-100/80 backdrop-blur-md flex items-center justify-between px-4 shrink-0">
+          <div className="flex items-center gap-3 text-[10px] text-ivory-500 font-mono">
+            <span className="flex items-center gap-1">
+              <span className={`w-1.5 h-1.5 rounded-full ${runtimeConnected ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+              {runtimeConnected ? 'localhost:3001' : 'offline'}
+            </span>
+            <span className="text-ivory-300">|</span>
+            <span>{models.length} models</span>
+            <span className="text-ivory-300">|</span>
+            <span>local-first</span>
+          </div>
+          <div className="flex items-center gap-2 text-[9px] text-ivory-400 font-sans">
+            <span className="bg-clay/10 text-clay px-1.5 py-0.5 rounded border border-clay/20 font-semibold">Desktop Dev Build</span>
+          </div>
+        </div>
+      }
     >
       {renderActiveScreen()}
     </AppShell>

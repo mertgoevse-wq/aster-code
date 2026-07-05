@@ -12,6 +12,14 @@ Status: SUCCESS — All builds pass cleanly
 4. `npm run build` — 0 errors
 5. `npm run runtime:build` — 0 errors
 
+## UI Foundation Fix — Restore Styled Desktop App Shell
+- **Root cause:** `postcss.config.js` was missing. Tailwind CSS requires PostCSS to process `@tailwind` directives. Without it, Vite served the CSS raw with `@tailwind base/components/utilities` that browsers can't interpret, resulting in completely unstyled HTML.
+- **Fix:** Created `apps/web/postcss.config.js` with Tailwind + Autoprefixer plugins
+- **theme.css rewrite:** Kept CSS reset (box-sizing, button/input normalization, scrollbar, body fonts), `@tailwind` directives, `@layer components` with `@apply` for ivory-card/input/btn classes, focus-ring utility, keyframes (spin/pulse). Removed 400+ lines of redundant hand-written utility class mirrors.
+- **AppShell.tsx:** Added optional `statusbar` prop for dev status bar
+- **App.tsx:** Added dev status bar showing runtime URL (localhost:3001), model count, local-first mode, "Desktop Dev Build" badge
+- **index.html:** Cleaned up conflicting inline body classes (now handled by theme.css reset)
+
 ## Auth Scaffolding (GitHub + Google OAuth)
 - Created `apps/runtime/src/auth/` module with 5 files:
   - `types.ts` — Auth types (OAuthConfig, StoredSession, TokenExchangeResult)

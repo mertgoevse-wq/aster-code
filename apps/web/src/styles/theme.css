@@ -2,17 +2,81 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    @apply bg-ivory-50 text-ivory-800 font-sans selection:bg-sand-200 selection:text-sand-900;
-  }
+/* ==========================================================================
+   CSS RESET — clean foundation
+   ========================================================================== */
 
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-sans font-semibold tracking-tight text-ivory-900;
-  }
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-/* Custom Scrollbar for a clean notebook look */
+html {
+  height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  height: 100%;
+  font-family: 'Instrument Sans', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #3D3427;
+  background: #FAF9F6;
+  overflow: hidden;
+}
+
+#root {
+  height: 100%;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Instrument Sans', 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #201A12;
+}
+
+/* Button reset */
+button {
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  border: none;
+  background: none;
+  color: inherit;
+  line-height: inherit;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Input reset */
+input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  line-height: inherit;
+}
+
+/* Links */
+a {
+  color: #866854;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+   SCROLLBAR — notebook-clean
+   ========================================================================== */
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -31,24 +95,53 @@
   background: #C5B9A5;
 }
 
-/* Glassmorphism/Clay card styling helpers */
-.ivory-card {
-  @apply bg-white border border-ivory-200 rounded-xl shadow-soft;
+/* ==========================================================================
+   TAILWIND COMPONENT CLASSES (processed by PostCSS + Tailwind)
+   ========================================================================== */
+
+@layer components {
+  .ivory-card {
+    @apply bg-white border border-ivory-200 rounded-xl shadow-soft;
+  }
+
+  .ivory-input {
+    @apply bg-ivory-50/50 border border-ivory-200 rounded-lg px-3 py-2 text-sm text-ivory-800 placeholder-ivory-400;
+    @apply focus:outline-none focus:border-clay focus:ring-1 focus:ring-clay/30 transition-all duration-200;
+  }
+
+  .ivory-btn-primary {
+    @apply bg-[#866854] text-white hover:bg-[#725441] active:bg-[#604432];
+    @apply font-medium text-sm px-4 py-2 rounded-lg shadow-border-glow;
+    @apply transition-all duration-200 inline-flex items-center justify-center gap-2;
+  }
+
+  .ivory-btn-secondary {
+    @apply bg-white hover:bg-ivory-100 text-ivory-700 border border-ivory-200 hover:border-ivory-300;
+    @apply font-medium text-sm px-4 py-2 rounded-lg;
+    @apply transition-all duration-200 inline-flex items-center justify-center gap-2;
+  }
 }
 
-.ivory-input {
-  @apply bg-ivory-50/50 border border-ivory-200 rounded-lg px-3 py-2 text-sm text-ivory-800 placeholder-ivory-400 focus:outline-none focus:border-clay focus:ring-1 focus:ring-clay/30 transition-all duration-200;
+/* ==========================================================================
+   FOCUS RING UTILITY
+   ========================================================================== */
+
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(176, 137, 116, 0.15);
+  border-color: #B08974;
 }
 
-.ivory-btn-primary {
-  @apply bg-[#866854] text-white hover:bg-[#725441] active:bg-[#604432] font-medium text-sm px-4 py-2 rounded-lg shadow-border-glow transition-all duration-200 flex items-center justify-center gap-2;
+/* ==========================================================================
+   KEYFRAME ANIMATIONS
+   ========================================================================== */
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
-.ivory-btn-secondary {
-  @apply bg-white hover:bg-ivory-100 text-ivory-700 border border-ivory-200 hover:border-ivory-300 font-medium text-sm px-4 py-2 rounded-lg transition-all duration-200 flex items-center justify-center gap-2;
-}
-
-/* Muted focus outlines for custom components */
-.focus-ring {
-  @apply focus:outline-none focus:ring-2 focus:ring-clay/30 focus:border-clay;
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }

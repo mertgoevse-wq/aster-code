@@ -3,10 +3,11 @@ import React from 'react';
 interface AppShellProps {
   sidebar: React.ReactNode;
   topbar: React.ReactNode;
+  statusbar?: React.ReactNode;
   children: React.ReactNode;
 }
 
-export default function AppShell({ sidebar, topbar, children }: AppShellProps) {
+export default function AppShell({ sidebar, topbar, statusbar, children }: AppShellProps) {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-ivory-50 select-none">
       {/* Navigation Sidebar */}
@@ -21,6 +22,9 @@ export default function AppShell({ sidebar, topbar, children }: AppShellProps) {
         <main className="flex-1 overflow-hidden relative">
           {children}
         </main>
+
+        {/* Dev Status Bar */}
+        {statusbar}
       </div>
     </div>
   );

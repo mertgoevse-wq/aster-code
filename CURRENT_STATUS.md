@@ -45,6 +45,7 @@ aster-code/
 
 ### Build & Type System
 1. **TypeScript compilation** — All 3 workspaces typecheck with 0 errors
+0. **🆕 CSS build fix** — PostCSS config created, Tailwind now processes correctly, full ivory/Claude-like theme renders properly
 2. **Vite bundling** — Production React app builds cleanly
 3. **Runtime compilation** — Express server builds with tsc to `dist/`
 4. **npm workspace isolation** — Each workspace resolves its own deps

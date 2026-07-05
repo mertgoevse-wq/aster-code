@@ -82,6 +82,11 @@ The agent loop architecture is in place but execution is simulated. The next pro
 - 8 placeholder skill candidates added to registry (all `inactive`)
 - See `docs/SKILL_CANDIDATE_MATRIX.md` for Tier 1 priority candidates
 
+## Completed: UI Foundation Fix ✅
+- **Root cause:** Missing `postcss.config.js` — Tailwind never processed CSS directives
+- **Fix:** Created PostCSS config, rewrote theme.css (CSS reset + Tailwind directives only, no utility mirroring)
+- Added dev status bar to AppShell/App.tsx
+
 ## Completed: Auth Scaffolding ✅
 - `apps/runtime/src/auth/types.ts` — Auth types
 - `apps/runtime/src/auth/oauthConfig.ts` — GitHub + Google OAuth config
