@@ -268,7 +268,8 @@ export default function App() {
       }
       statusbar={
         <div className="h-7 border-t border-ivory-200 bg-ivory-100/80 backdrop-blur-md flex items-center justify-between px-4 shrink-0">
-          <div className="flex items-center gap-3 text-[10px] text-ivory-500 font-mono">                <span className="flex items-center gap-1">
+          <div className="flex items-center gap-3 text-[10px] text-ivory-500 font-mono">
+            <span className="flex items-center gap-1">
               <span className={`w-1.5 h-1.5 rounded-full ${electronRuntimeState === 'starting' ? 'bg-blue-400 animate-pulse' : runtimeConnected ? 'bg-emerald-500' : 'bg-amber-500'}`} />
               {electronRuntimeState === 'starting' ? 'runtime starting...' : runtimeConnected ? 'localhost:3001' : 'offline'}
             </span>
@@ -276,6 +277,11 @@ export default function App() {
             <span>{models.length} models</span>
             <span className="text-ivory-300">|</span>
             <span>local-first</span>
+            <span className="text-ivory-300">|</span>
+            <span className="flex items-center gap-1 text-amber-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              LLM disconnected
+            </span>
           </div>
           <div className="flex items-center gap-2 text-[9px] text-ivory-400 font-sans">
             {electronRuntimeState && (

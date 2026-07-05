@@ -4,6 +4,7 @@ import { ChatMessage, AgentEvent, AgentPlan, AgentSessionInfo, AgentTaskType, Ro
 import AgentActivityFeed from '../components/AgentActivityFeed.tsx';
 import AgentPlanPanel from '../components/AgentPlanPanel.tsx';
 import AgentRoutingPreview from '../components/AgentRoutingPreview.tsx';
+import WelcomeBanner from '../components/WelcomeBanner.tsx';
 import { getSelectedPromptId, setSelectedPromptId, getPromptById } from './SettingsScreen.tsx';
 import { apiFetch } from '../api.ts';
 
@@ -14,14 +15,7 @@ interface ChatScreenProps {
 
 export default function ChatScreen({ selectedModelId: _selectedModelId, runtimeConnected }: ChatScreenProps) {
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content: 'Hello! I am your Aster agent. I operate under a strict approval-gated loop — I will plan before acting, and you must approve edits or commands before they execute. How can I help you today?',
-      timestamp: new Date(Date.now() - 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    }
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [events, setEvents] = useState<AgentEvent[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -72,19 +66,19 @@ export default function ChatScreen({ selectedModelId: _selectedModelId, runtimeC
     };
   }, []);
 
-  const handleSend = async () => {
-    if (!input.trim() || isProcessing || !runtimeConnected) return;
+  const handleSend = async (taskText?: string) => {
+    const text = (taskText || input).trim();
+    if (!text || isProcessing || !runtimeConnected) return;
 
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
-      content: input,
+      content: text,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
     setMessages(prev => [...prev, userMsg]);
-    const taskText = input.trim();
-    setInput('');
+    if (!taskText) setInput('');
     setIsProcessing(true);
     setEvents([]);
     setPlan(null);
@@ -98,7 +92,7 @@ export default function ChatScreen({ selectedModelId: _selectedModelId, runtimeC
       const sessionRes = await apiFetch('/api/agent/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task: taskText }),
+        body: JSON.stringify({ task: text }),
       });
 
       if (!sessionRes.ok) {
@@ -253,9 +247,16 @@ export default function ChatScreen({ selectedModelId: _selectedModelId, runtimeC
   };
 
   return (
-    <div className="flex h-full w-full overflow-hidden">
-      {/* Messages Column */}
+    <div className="flex h-full w-full overflow-hidden">          {/* Messages Column */}
       <div className="flex-1 flex flex-col justify-between bg-ivory-50 h-full min-w-0">
+        {/* Show welcome banner when no messages yet */}
+        {messages.length === 0 && (
+          <WelcomeBanner
+            runtimeConnected={runtimeConnected}
+            onTryPrompt={(prompt) => handleSend(prompt)}
+          />
+        )}
+
         {/* Active prompt badge */}
         {activePrompt && (
           <div className="px-8 pt-4 pb-0">
@@ -355,7 +356,7 @@ export default function ChatScreen({ selectedModelId: _selectedModelId, runtimeC
               className="w-full bg-ivory-50 border border-ivory-200 rounded-xl py-3.5 pl-4 pr-14 text-sm focus:outline-none focus:border-clay focus:ring-1 focus:ring-clay/20 resize-none h-14 max-h-32 disabled:bg-ivory-100/50 disabled:cursor-not-allowed text-ivory-800 placeholder-ivory-400"
             />
             <button
-              onClick={handleSend}
+              onClick={() => handleSend()}
               disabled={!input.trim() || isProcessing || !runtimeConnected}
               className="absolute right-3 bg-[#866854] hover:bg-[#725441] disabled:bg-ivory-300 text-white p-2.5 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-clay/30"
             >

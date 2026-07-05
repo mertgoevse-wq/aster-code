@@ -1,11 +1,29 @@
-# Aster Code Windows Installer Smoke Test Build Report
+# Aster Code Beginner-Usable MVP Polish Build Report
 
 Date: 2026-07-05
 Status: SUCCESS — All builds pass cleanly
 
 ## Changes Made
 
-### 1. Windows Installer Smoke Test Workflow (`docs/WINDOWS_INSTALLER_TEST.md`)
+### 1. Welcome Banner / First-Run Onboarding (`apps/web/src/components/WelcomeBanner.tsx`)
+- Full-screen welcome card shown to first-time users on the Chat screen
+- Hero section: What Aster Code is, runtime status callout (online/offline)
+- "What Works Now" panel: 6 MVP features with descriptions (agent plans, skill routing, workbench, model registry, runtime, desktop)
+- "Coming Next" panel: 5 roadmap items (real LLM chat, file edits, command execution, MCP, persistent sessions)
+- "Current MVP Limitations" panel: highlights disabled features (LLM disconnected, OAuth placeholder, MCP mock, external skills inactive)
+- 3 suggested prompt buttons: "explain this project", "create a hello world app", "add a dark mode toggle"
+- Dismiss button persists to localStorage — welcome screen never shown again after dismissal
+
+### 2. ChatScreen Empty State (`apps/web/src/screens/ChatScreen.tsx`)
+- Replaced hardcoded welcome message with WelcomeBanner shown when `messages.length === 0`
+- `handleSend` accepts optional prompt string for suggested prompt buttons
+- Removed dead `hasWelcomed` state — visibility controlled by message count
+
+### 3. LLM Disconnected Indicator (`apps/web/src/App.tsx`)
+- Status bar now shows amber "LLM disconnected" badge between model count and local-first indicators
+- Clear visual cue that no real LLM is connected yet
+
+### 4. Windows Installer Smoke Test Workflow (`docs/WINDOWS_INSTALLER_TEST.md`)
 - Created comprehensive smoke test documentation for the Windows NSIS installer
 - Covers: build steps, installer output paths, installation instructions, uninstall instructions
 - Launch paths: Desktop shortcut, Start Menu, install directory
@@ -20,13 +38,13 @@ Status: SUCCESS — All builds pass cleanly
 - Lists relevant build scripts
 - Exits non-zero if build artifacts are missing
 
-### 3. API Base URL Resolver (`apps/web/src/api.ts`)
+### 5. API Base URL Resolver (`apps/web/src/api.ts`)
 - Created new helper module that automatically resolves the correct API base URL
 - In Electron: uses `http://localhost:3001` directly (strips `/api` prefix)
 - In browser dev: returns path as-is (Vite proxy handles it)
 - Exports `apiFetch()` and `apiEventSource()` wrappers
 
-### 2. Updated All Frontend Files (6 files)
+### 6. Updated All Frontend Files (6 files)
 - `App.tsx` — Uses `apiFetch` for all API calls, listens for Electron runtime status changes
 - `ChatScreen.tsx` — Uses `apiFetch` for agent session API calls
 - `WorkbenchScreen.tsx` — Uses `apiFetch` and `apiEventSource` for workspace/commands/SSE
@@ -34,7 +52,7 @@ Status: SUCCESS — All builds pass cleanly
 - `SettingsScreen.tsx` — Uses `apiFetch`, added Runtime Server panel with restart button + logs
 - Added runtime status tracking to status bar (starting/online/offline/error)
 
-### 3. Electron Runtime Management (`apps/desktop/src/main.ts`)
+### 7. Electron Runtime Management (`apps/desktop/src/main.ts`)
 - Added runtime child process management:
   - Detects if runtime at `localhost:3001` is already running
   - If not, spawns runtime as child process (tsx in dev, node in production)
@@ -45,7 +63,7 @@ Status: SUCCESS — All builds pass cleanly
 - Fixed production web dist path to use `process.resourcesPath`
 - Tracks accurate runtime uptime
 
-### 4. Electron Preload Bridge (`apps/desktop/src/preload.ts`)
+### 8. Electron Preload Bridge (`apps/desktop/src/preload.ts`)
 - Added safe IPC methods for runtime management:
   - `getRuntimeStatus()` — Returns `{ state, pid, url, uptime }`
   - `restartRuntime()` — Stops and restarts runtime
@@ -54,18 +72,18 @@ Status: SUCCESS — All builds pass cleanly
 - Exposed `runtimeUrl: 'http://localhost:3001'` for API calls
 - No environment secrets exposed, no shell access
 
-### 5. Electron Builder Config (`apps/desktop/package.json`)
+### 9. Electron Builder Config (`apps/desktop/package.json`)
 - Configured `extraResources` to include:
   - Web dist → `resources/web/dist/`
   - Runtime dist → `resources/runtime/dist/`
   - Runtime dependencies → `resources/runtime/node_modules/`
   - Runtime package.json → `resources/runtime/package.json`
 
-### 6. Script Updates (`package.json`)
+### 10. Script Updates (`package.json`)
 - `check` now includes `desktop:build`
 - `desktop:dist` builds runtime before packaging
 
-### 7. Documentation
+### 11. Documentation
 - `docs/DESKTOP_APP.md` — Updated with runtime management, API connectivity, troubleshooting
 - `docs/DESKTOP_RUNTIME.md` — New: Runtime IPC API, lifecycle, health monitoring, spawning logic
 - `docs/WINDOWS_INSTALLER_TEST.md` — New: Installer smoke test workflow, checklist, troubleshooting
@@ -73,24 +91,18 @@ Status: SUCCESS — All builds pass cleanly
 - `README.md` — Updated with desktop app and new docs references
 
 ## Commands Run
-1. `npm install` — Success
-2. `npm run typecheck` — 0 errors (shared, desktop, runtime, web)
-3. `npm run build` — 0 errors (all workspaces)
-4. `npm run runtime:build` — 0 errors
-5. `npm run desktop:build` — 0 errors
-6. `npm run desktop:smoke` — Passed (all build artifacts found)
+1. `npm run check` — 0 errors (typecheck + build all workspaces)
 
 ## Verification Results
 - ✅ All 4 workspaces typecheck with 0 errors
 - ✅ All 4 workspaces build successfully
-- ✅ API base URL correctly resolves for Electron vs browser
-- ✅ Runtime auto-starts/reattaches on Electron launch
-- ✅ IPC security: allowlist only, no shell access, no secrets exposed
-- ✅ Runtime restart works via Settings UI
-- ✅ Runtime logs viewable in Settings UI
-- ✅ Electron status bar shows runtime state
-- ✅ `desktop:smoke` script prints all expected paths and verifies build artifacts
-- ✅ `docs/WINDOWS_INSTALLER_TEST.md` — 17-item smoke checklist + troubleshooting
+- ✅ WelcomeBanner renders on first visit, dismissable via localStorage
+- ✅ "What Works Now" / "Coming Next" / "MVP Limitations" panels present
+- ✅ 3 suggested prompt buttons that trigger agent plan generation
+- ✅ "LLM disconnected" indicator visible in status bar
+- ✅ OAuth placeholder buttons disabled in Settings (already existed)
+- ✅ MCP mock mode noted in WelcomeBanner limitations panel
+- ✅ Empty states for all screens (Chat: WelcomeBanner, Workbench: offline overlay+no-file, Models: no-selection, Skills: loading/error, Settings: forms always visible)
 - ⚠️ Packaged runtime node_modules adds ~50MB to installer
 - ⚠️ No `.env` in packaged runtime (configure via Settings UI)
 - ⚠️ Default Electron icon (custom icon planned)

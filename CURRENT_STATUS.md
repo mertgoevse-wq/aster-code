@@ -44,6 +44,12 @@ aster-code/
 
 ## What Works ✅
 
+### First-Run Experience (New)
+1. **✅ Welcome Banner** — Shows on first visit: onboarding, What Works Now, Coming Next, MVP limitations
+2. **✅ Suggested Prompts** — 3 one-click prompts: "explain this project", "create a hello world app", "add a dark mode toggle"
+3. **✅ Dismiss Persistence** — Welcome banner dismisses permanently via localStorage
+4. **✅ LLM Disconnected Indicator** — Status bar shows amber "LLM disconnected" badge
+
 ### Desktop App (Updated)
 1. **✅ API calls work in packaged app** — `api.ts` helper resolves `http://localhost:3001` directly in Electron, bypassing Vite proxy
 2. **✅ Runtime auto-starts** — Electron detects if runtime is running; if not, spawns as child process
@@ -76,6 +82,12 @@ aster-code/
 ### Dependencies
 1. **36 npm vulnerabilities** (2 low, 10 moderate, 18 high, 6 critical) — Run `npm audit fix`
 
+### Stubbed Features (Clearly Indicated)
+1. **LLM chat** — Mock plans only; "LLM disconnected" badge in status bar + WelcomeBanner limitations panel
+2. **OAuth** — GitHub/Google buttons disabled in Settings with "not implemented" notes
+3. **MCP execution** — Registry built but real tool execution TBD; noted in WelcomeBanner
+4. **External skills** — 8 inactive candidates from repo research; shown in Skills screen
+
 ## Audit Checklist Results
 
 | # | Check | Result |
@@ -90,3 +102,6 @@ aster-code/
 | 8 | `npm run desktop:dist` works? | ✅ Yes — builds web + runtime + packages |
 | 9 | `npm run desktop:smoke` works? | ✅ Yes — prints paths, verifies artifacts |
 | 10 | `docs/WINDOWS_INSTALLER_TEST.md` exists? | ✅ Yes — 17-item checklist + troubleshooting |
+| 11 | WelcomeBanner shows on first visit? | ✅ Yes — onboarding, What Works Now, Coming Next, limitations |
+| 12 | LLM disconnected indicator visible? | ✅ Yes — amber badge in status bar |
+| 13 | Stubbed features clearly marked? | ✅ Yes — disabled OAuth buttons, limitations panel, status badge |
