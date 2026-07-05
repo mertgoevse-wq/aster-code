@@ -1,7 +1,7 @@
 import { AgentPlan, AgentTaskType } from '@aster-code/shared';
 import {
   CheckCircle, ChevronDown, ChevronUp, FileText, Shield,
-  ThumbsUp, ThumbsDown, Lock
+  ThumbsUp, ThumbsDown, Lock, Search, Edit, Terminal, Eye
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -31,17 +31,17 @@ export default function AgentPlanPanel({ plan, taskType, onApprove, onReject, is
   const getPermissionBadge = (level: string) => {
     switch (level) {
       case 'read-only':
-        return { color: 'bg-slate-100 text-slate-600 border-slate-200', label: 'Read Only' };
+        return { color: 'bg-slate-100 text-slate-600 border-slate-200', label: 'Read Only', icon: <Eye className="w-2.5 h-2.5" /> };
       case 'suggest-edits':
-        return { color: 'bg-blue-50 text-blue-600 border-blue-200', label: 'Suggest Edits' };
+        return { color: 'bg-blue-50 text-blue-600 border-blue-200', label: 'Suggest Edits', icon: <Edit className="w-2.5 h-2.5" /> };
       case 'apply-edits-after-approval':
-        return { color: 'bg-amber-50 text-amber-600 border-amber-200', label: 'Needs Approval' };
+        return { color: 'bg-amber-50 text-amber-600 border-amber-200', label: 'Needs Approval', icon: <Lock className="w-2.5 h-2.5" /> };
       case 'run-safe-commands-after-approval':
-        return { color: 'bg-orange-50 text-orange-600 border-orange-200', label: 'Cmd + Approval' };
+        return { color: 'bg-orange-50 text-orange-600 border-orange-200', label: 'Cmd + Approval', icon: <Terminal className="w-2.5 h-2.5" /> };
       case 'dangerous-disabled':
-        return { color: 'bg-rose-50 text-rose-600 border-rose-200', label: 'Blocked' };
+        return { color: 'bg-rose-50 text-rose-600 border-rose-200', label: 'Blocked', icon: <Lock className="w-2.5 h-2.5" /> };
       default:
-        return { color: 'bg-ivory-100 text-ivory-500 border-ivory-200', label: level };
+        return { color: 'bg-ivory-100 text-ivory-500 border-ivory-200', label: level, icon: null };
     }
   };
 
@@ -58,8 +58,17 @@ export default function AgentPlanPanel({ plan, taskType, onApprove, onReject, is
   };
 
   const taskInfo = getTaskTypeLabel(taskType);
-
   const canApprove = plan.status === 'pending-approval' && !isProcessing;
+
+  const statusColor = (status: string) => {
+    switch (status) {
+      case 'pending-approval': return 'bg-amber-50 text-amber-600 border-amber-200';
+      case 'approved': case 'completed': return 'bg-emerald-50 text-emerald-600 border-emerald-200';
+      case 'rejected': return 'bg-rose-50 text-rose-600 border-rose-200';
+      case 'executing': return 'bg-blue-50 text-blue-600 border-blue-200';
+      default: return 'bg-ivory-100 text-ivory-500 border-ivory-200';
+    }
+  };
 
   return (
     <div className="bg-white border border-ivory-200 rounded-xl shadow-soft overflow-hidden">
@@ -84,13 +93,7 @@ export default function AgentPlanPanel({ plan, taskType, onApprove, onReject, is
             </div>
           </div>
           <div className="text-right">
-            <div className={`text-[10px] px-2 py-0.5 rounded border font-semibold ${
-              plan.status === 'pending-approval' ? 'bg-amber-50 text-amber-600 border-amber-200' :
-              plan.status === 'approved' || plan.status === 'completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
-              plan.status === 'rejected' ? 'bg-rose-50 text-rose-600 border-rose-200' :
-              plan.status === 'executing' ? 'bg-blue-50 text-blue-600 border-blue-200' :
-              'bg-ivory-100 text-ivory-500 border-ivory-200'
-            }`}>
+            <div className={`text-[10px] px-2 py-0.5 rounded border font-semibold ${statusColor(plan.status)}`}>
               {plan.status.replace(/-/g, ' ').toUpperCase()}
             </div>
           </div>
@@ -139,7 +142,8 @@ export default function AgentPlanPanel({ plan, taskType, onApprove, onReject, is
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-semibold text-ivory-800">{step.title}</span>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium ${permBadge.color}`}>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium flex items-center gap-1 ${permBadge.color}`}>
+                      {permBadge.icon}
                       {permBadge.label}
                     </span>
                     {step.toolName && (
@@ -158,16 +162,67 @@ export default function AgentPlanPanel({ plan, taskType, onApprove, onReject, is
 
               {/* Expanded detail */}
               {isExpanded && (
-                <div className="px-4 pb-4 pl-[52px] space-y-2">
-                  <p className="text-xs text-ivory-600 leading-relaxed">{step.description}</p>
+                <div className="px-4 pb-4 pl-[52px] space-y-3">
+                  {/* Description */}
+                  <div>
+                    <p className="text-xs text-ivory-600 leading-relaxed">{step.description}</p>
+                  </div>
+
+                  {/* Inspection targets */}
+                  {step.inspectionTargets && step.inspectionTargets.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-semibold text-ivory-500 flex items-center gap-1">
+                        <Search className="w-3 h-3" /> Will Inspect
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {step.inspectionTargets.map((target, i) => (
+                          <span key={i} className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 rounded px-1.5 py-0.5 font-mono">
+                            {target}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* May change */}
+                  {step.mayChange && step.mayChange.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-semibold text-amber-600 flex items-center gap-1">
+                        <Edit className="w-3 h-3" /> May Change
+                      </p>
+                      <ul className="list-disc list-inside space-y-0.5">
+                        {step.mayChange.map((change, i) => (
+                          <li key={i} className="text-[10px] text-amber-700">{change}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Affected files */}
                   {step.affectedFiles.length > 0 && (
-                    <div className="flex flex-wrap gap-1 items-center">
-                      <FileText className="w-3 h-3 text-ivory-400" />
-                      {step.affectedFiles.map((file, i) => (
-                        <span key={i} className="text-[10px] bg-ivory-100 text-ivory-600 border border-ivory-200 rounded px-1.5 py-0.5 font-mono">
-                          {file}
-                        </span>
-                      ))}
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-semibold text-ivory-500 flex items-center gap-1">
+                        <FileText className="w-3 h-3" /> Affected Files
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {step.affectedFiles.map((file, i) => (
+                          <span key={i} className="text-[10px] bg-ivory-100 text-ivory-600 border border-ivory-200 rounded px-1.5 py-0.5 font-mono">
+                            {file}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Verification step */}
+                  {step.verifyStep && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-semibold text-emerald-600 flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" /> Verification
+                      </p>
+                      <p className="text-[10px] text-emerald-700 bg-emerald-50/50 border border-emerald-200 rounded p-2 leading-relaxed">
+                        {step.verifyStep}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -177,7 +232,7 @@ export default function AgentPlanPanel({ plan, taskType, onApprove, onReject, is
         })}
       </div>
 
-      {/* Approval buttons */}
+      {/* Approval section */}
       {canApprove && (
         <div className="p-4 border-t border-ivory-100 bg-amber-50/50">
           <div className="flex gap-3">
@@ -199,12 +254,12 @@ export default function AgentPlanPanel({ plan, taskType, onApprove, onReject, is
             </button>
           </div>
           <p className="text-[10px] text-ivory-400 text-center mt-2">
-            Approving will run all steps sequentially. File writes and commands are simulated in MVP.
+            Approving will run all steps sequentially. Each write/command step requires separate confirmation. MVP: execution is simulated — no real file edits or commands.
           </p>
         </div>
       )}
 
-      {/* Post-approval info */}
+      {/* Post-approval states */}
       {plan.status === 'executing' && (
         <div className="p-4 border-t border-ivory-100 bg-blue-50/50 text-center">
           <div className="flex items-center justify-center gap-2 mb-1">
@@ -219,6 +274,9 @@ export default function AgentPlanPanel({ plan, taskType, onApprove, onReject, is
         <div className="p-4 border-t border-ivory-100 bg-emerald-50/50 text-center">
           <CheckCircle className="w-4 h-4 text-emerald-500 mx-auto mb-1" />
           <span className="text-xs text-emerald-700 font-medium">All steps completed</span>
+          <p className="text-[10px] text-ivory-500 mt-0.5">
+            MVP: File writes and commands were simulated — no real files were modified.
+          </p>
         </div>
       )}
 

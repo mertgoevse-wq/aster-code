@@ -152,6 +152,7 @@ export interface RoutingResult {
   selectedSkills: SkillCandidate[];
   requiresApproval: boolean;
   summary: string;
+  detectedLanguage?: string;
 }
 
 export interface RoutingSettings {
@@ -230,6 +231,12 @@ export interface AgentPlanStep {
   startedAt?: string;
   completedAt?: string;
   error?: string;
+  /** What this step will inspect (files, configs, logs) */
+  inspectionTargets?: string[];
+  /** What this step may change once approved */
+  mayChange?: string[];
+  /** How to verify this step completed successfully */
+  verifyStep?: string;
 }
 
 export interface AgentPlan {

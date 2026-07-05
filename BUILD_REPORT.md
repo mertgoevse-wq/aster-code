@@ -1,32 +1,68 @@
-# Aster Code v0.1.0 Local Persistence Stabilization Build Report
+# Aster Code v0.1.0 Agent Planning Quality Build Report
 
 Date: 2026-07-05
-Status: SUCCESS — All builds + smoke tests pass
+Status: SUCCESS — All builds pass
 
 ## Changes Made
 
-### 1. Storage Helper (`apps/web/src/lib/storage.ts`)
-- Namespaced `aster-code:` prefix for all localStorage keys
-- Methods: `get()`, `set()`, `remove()`, `getJson()`, `setJson()`, `has()`, `listKeys()`, `resetAll()`, `clearOldKeys()`
-- Automatic migration from old `aster_` prefixed keys to `aster-code:` namespace
-- All operations wrapped in try/catch (graceful degradation if localStorage unavailable)
-- Migration version tracking via `aster-code:storage-version`
+### 1. Rewritten Intent Classifier (`apps/runtime/src/agent/intentClassifier.ts`)
+- Added **German + English keyword support** — 12 intent categories with DE+EN keyword lists
+- Language detection function: classifies as `en`, `de`, `mixed`, or `unknown`
+- Significantly expanded keyword groups (e.g., "inspect repo", "build app", "add provider", "test installer")
+- Confidence scoring: base score + keyword density bonuses + language boost
+- Structured reason messages: shows matched keywords and language badge
+- Exports `detectLanguage` for use by agent router
 
-### 2. Migrated All LocalStorage Usage
-- **WelcomeBanner.tsx** — `welcome-dismissed` key via storage helper
-- **App.tsx** — `auto-refresh`, `auto-refresh-interval` via storage helper
-- **SettingsScreen.tsx** — `system-prompts`, `selected-prompt-id`, `provider-configs` via storage helper
-- Fixed `loadPrompts` regression: restored key-existence check (not array length)
+### 2. Rewritten Skill Router (`apps/runtime/src/agent/skillRouter.ts`)
+- Detailed `reasonFn` per skill: explains WHY a skill was selected (not just what it does)
+- Risk explanations per skill: concrete statements like "Read-only — no files modified" or "Commands require approval"
+- `buildRiskExplanation()` utility: aggregates risk across all selected skills
+- Multi-skill selection for complex intents (3 skills for build-feature, 3 for refactor)
+- Fixed empty prompt bug (was showing empty parentheses in `fix-bug` reason)
 
-### 3. Reset Local Data (`apps/web/src/screens/SettingsScreen.tsx`)
-- "Reset All Local Data" button in Settings > Runtime Server
-- Confirmation dialog before clearing all `aster-code:*` keys
-- Page reload after reset to restore defaults
+### 3. Rewritten Plan Generator (`apps/runtime/src/agent/planner.ts`)
+- Concrete step titles (e.g., "Inspect project structure", "Modify component styling")
+- Each step now includes:
+  - `inspectionTargets` — what files/configs the step will inspect
+  - `mayChange` — what the step may change once approved
+  - `verifyStep` — how to confirm the step succeeded
+- Permission-aware step generation: read-only vs edit vs command steps
+- German keyword support in `classifyTask`
+- 7 task types with complete plan templates (explain, plan, edit-code, debug-build, ui-fix, dependency-fix, docs)
 
-### 4. Documentation (`docs/LOCAL_PERSISTENCE.md`)
-- Complete persistence reference: storage keys, types, migration, reset behavior
-- Documents what IS and IS NOT stored (API keys, tokens, chat history)
-- Notes non-persisted fields: selectedModelId, activeTab
+### 4. Updated Agent Router (`apps/runtime/src/agent/agentRouter.ts`)
+- Added **language detection**: `detectedLanguage` field in routing result
+- Enhanced summary: language flag (🇬🇧/🇩🇪/🌐), risk emoji (🔴🟡🟢), approval gate status
+- Integrates `buildRiskExplanation` for human-readable risk assessment
+
+### 5. Updated Shared Types (`packages/shared/src/types.ts`)
+- `RoutingResult.detectedLanguage?: string` — language detection result
+- `AgentPlanStep.inspectionTargets?: string[]` — what the step inspects
+- `AgentPlanStep.mayChange?: string[]` — what the step may modify
+- `AgentPlanStep.verifyStep?: string` — how to verify step completion
+
+### 6. Updated Frontend Components
+- **AgentRoutingPreview.tsx** — Language flag badge (🇩🇪/🇬🇧/🌐), intent reasons list, approval gating section with bulleted rules, risk emoji badges
+- **AgentPlanPanel.tsx** — Expanded step view now shows: Inspection Targets (blue), May Change (amber), Affected Files (grey), Verification (green). New permission icons (Eye/Edit/Lock/Terminal).
+
+### 7. Example Prompts Documentation (`docs/EXAMPLE_AGENT_PROMPTS.md`)
+- 37 curated prompts across 9 categories: Beginner, Coding, Debugging, Build/Release, Provider/Model, UI/Workbench, Documentation, MCP/Integration, Auth/Setup
+- Each prompt shows expected intent + skills
+- German prompt examples (6 prompts)
+- "What the Agent Will NOT Do" section
+- Testing instructions
+
+## Commands Run
+1. `npm run check` — 0 errors (typecheck + build all workspaces)
+
+## Verification Results
+- ✅ All 4 workspaces typecheck with 0 errors
+- ✅ All 4 workspaces build successfully
+- ✅ German prompts classified correctly with 🇩🇪 badge
+- ✅ Plan steps include inspectionTargets, mayChange, verifyStep
+- ✅ Risk explanations shown per skill with emoji badges
+- ✅ Approval gating UI clearly explains what requires approval
+- ✅ No real LLM calls — all deterministic rule-based classification
 
 ---
 

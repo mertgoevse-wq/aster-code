@@ -1,4 +1,4 @@
-# Current Status — Aster Code Repository Audit
+# Current Status — Agent Planning Quality Improvements
 
 Date: 2026-07-05
 Auditor: Codebuff (automated audit)

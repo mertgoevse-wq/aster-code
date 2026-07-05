@@ -1,7 +1,7 @@
 import { RoutingResult, RiskLevel } from '@aster-code/shared';
 import {
   BrainCircuit, Wrench, Shield, AlertTriangle, CheckCircle,
-  Lock, Eye, Play, FileText
+  Lock, Eye, Play, FileText, Globe
 } from 'lucide-react';
 
 interface AgentRoutingPreviewProps {
@@ -17,12 +17,31 @@ export default function AgentRoutingPreview({ routing }: AgentRoutingPreviewProp
     }
   };
 
+  const riskEmoji = (level: RiskLevel) => {
+    switch (level) {
+      case 'high': return '🔴';
+      case 'medium': return '🟡';
+      case 'low': return '🟢';
+    }
+  };
+
   const permIcon = (perm: string) => {
     if (perm.includes('read')) return <Eye className="w-2.5 h-2.5" />;
     if (perm.includes('write')) return <FileText className="w-2.5 h-2.5" />;
     if (perm.includes('command') || perm.includes('execute')) return <Play className="w-2.5 h-2.5" />;
     return <Lock className="w-2.5 h-2.5" />;
   };
+
+  const languageLabel = (lang?: string) => {
+    switch (lang) {
+      case 'de': return { flag: '🇩🇪', label: 'German' };
+      case 'en': return { flag: '🇬🇧', label: 'English' };
+      case 'mixed': return { flag: '🌐', label: 'Mixed DE+EN' };
+      default: return null;
+    }
+  };
+
+  const lang = languageLabel(routing.detectedLanguage);
 
   return (
     <div className="bg-white border border-ivory-200 rounded-xl shadow-soft overflow-hidden">
@@ -38,12 +57,20 @@ export default function AgentRoutingPreview({ routing }: AgentRoutingPreviewProp
               Automatic intent detection and skill selection based on your prompt.
             </p>
           </div>
-          {routing.requiresApproval && (
-            <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
-              <AlertTriangle className="w-2.5 h-2.5" />
-              Requires Approval
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {lang && (
+              <span className="text-[9px] bg-ivory-100 text-ivory-600 border border-ivory-200 font-medium px-2 py-0.5 rounded-full flex items-center gap-1">
+                <Globe className="w-2.5 h-2.5" />
+                {lang.flag} {lang.label}
+              </span>
+            )}
+            {routing.requiresApproval && (
+              <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
+                <AlertTriangle className="w-2.5 h-2.5" />
+                Requires Approval
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -51,7 +78,7 @@ export default function AgentRoutingPreview({ routing }: AgentRoutingPreviewProp
       <div className="p-4 space-y-3">
         <h4 className="text-[10px] font-semibold text-ivory-400 uppercase tracking-wider flex items-center gap-1.5">
           <BrainCircuit className="w-3 h-3" />
-          Detected Intents
+          Detected Intents ({routing.intents.length})
         </h4>
         <div className="flex flex-wrap gap-1.5">
           {routing.intents.map((intent, i) => (
@@ -62,11 +89,20 @@ export default function AgentRoutingPreview({ routing }: AgentRoutingPreviewProp
                   ? 'bg-blue-50 text-blue-700 border-blue-200'
                   : 'bg-ivory-100 text-ivory-400 border-ivory-200'
               }`}
-              title={`${intent.reason} (${Math.round(intent.confidence * 100)}%)`}
+              title={`${intent.reason} (${Math.round(intent.confidence * 100)}% confidence)`}
             >
               {intent.intent.replace(/-/g, ' ')}
               <span className="ml-1 opacity-60">{Math.round(intent.confidence * 100)}%</span>
             </span>
+          ))}
+        </div>
+        {/* Intent reasons summary */}
+        <div className="space-y-1">
+          {routing.intents.filter(i => i.candidates.length > 0).map((intent, i) => (
+            <p key={i} className="text-[10px] text-ivory-500 leading-relaxed">
+              <span className="font-semibold text-ivory-600">{intent.intent.replace(/-/g, ' ')}:</span>{' '}
+              {intent.reason}
+            </p>
           ))}
         </div>
       </div>
@@ -80,7 +116,7 @@ export default function AgentRoutingPreview({ routing }: AgentRoutingPreviewProp
 
         {routing.selectedSkills.length === 0 ? (
           <div className="text-[10px] text-ivory-400 italic p-3 bg-ivory-50 rounded-lg border border-ivory-200">
-            No matching skills found. Try rephrasing your request.
+            No matching skills found. Try rephrasing your request with more specific keywords.
           </div>
         ) : (
           <div className="space-y-2">
@@ -96,13 +132,13 @@ export default function AgentRoutingPreview({ routing }: AgentRoutingPreviewProp
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-bold text-ivory-800">{skill.skillName}</span>
                     <span className={`text-[8px] px-1.5 py-0.5 rounded-full border font-bold ${riskBadge(skill.riskLevel)}`}>
-                      {skill.riskLevel.toUpperCase()}
+                      {riskEmoji(skill.riskLevel)} {skill.riskLevel.toUpperCase()}
                     </span>
                     <span className="text-[8px] text-ivory-400 font-mono">
                       {Math.round(skill.confidence * 100)}% match
                     </span>
                   </div>
-                  <p className="text-[10px] text-ivory-500 mt-0.5">{skill.reason}</p>
+                  <p className="text-[10px] text-ivory-600 mt-0.5 leading-relaxed">{skill.reason}</p>
 
                   {/* Permissions */}
                   <div className="flex flex-wrap gap-1 mt-1.5">
@@ -118,6 +154,44 @@ export default function AgentRoutingPreview({ routing }: AgentRoutingPreviewProp
             ))}
           </div>
         )}
+      </div>
+
+      {/* Approval Gating Summary */}
+      <div className="px-4 pb-3">
+        <h4 className="text-[10px] font-semibold text-ivory-400 uppercase tracking-wider flex items-center gap-1.5 mb-2">
+          <Shield className="w-3 h-3" />
+          Approval Gating
+        </h4>
+        <div className={`p-3 rounded-lg border text-[10px] leading-relaxed ${
+          routing.requiresApproval
+            ? 'bg-amber-50/50 border-amber-200 text-amber-800'
+            : 'bg-emerald-50/50 border-emerald-200 text-emerald-800'
+        }`}>
+          {routing.requiresApproval ? (
+            <div className="space-y-2">
+              <p className="font-semibold flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                This plan requires your approval before execution
+              </p>
+              <ul className="list-disc list-inside space-y-0.5 text-amber-700">
+                <li>File edits require per-step approval — you review every change</li>
+                <li>Commands require per-step approval — nothing runs without your consent</li>
+                <li>You can reject the entire plan or individual steps</li>
+                <li>The agent never modifies files or runs commands autonomously</li>
+              </ul>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <p className="font-semibold flex items-center gap-1">
+                <CheckCircle className="w-3 h-3" />
+                Safe to execute — read-only or advisory only
+              </p>
+              <p className="text-emerald-700">
+                No file modifications or commands are planned. The agent will only read and analyze.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Summary footer */}
