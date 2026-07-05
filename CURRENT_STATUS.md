@@ -50,6 +50,7 @@ aster-code/
 4. **npm workspace isolation** — Each workspace resolves its own deps
 5. **Shared package re-exports** — `@aster-code/shared` types are correctly imported by web and runtime
 6. **🆕 Local test workflow** — `npm run check` validates all builds; `docs/LOCAL_TESTING.md` with smoke test checklist
+7. **🆕 External repo research** — 29 repos analyzed, 12 cloned, 8 placeholder skill candidates added (all inactive)
 
 ### Backend API (Runtime Server)
 1. **Health check** — `GET /health` returns uptime + status

@@ -55,6 +55,12 @@ The agent loop architecture is in place but execution is simulated. The next pro
 
 ---
 
+## Completed: External Repo Research ✅
+- 29 repos analyzed, 12 cloned shallowly into `_research/import-candidates/`
+- `docs/EXTERNAL_REPO_RESEARCH.md`, `SKILL_CANDIDATE_MATRIX.md`, `REPO_LICENSE_REVIEW.md`
+- 8 placeholder skill candidates added to registry (all `inactive`)
+- See `docs/SKILL_CANDIDATE_MATRIX.md` for Tier 1 priority candidates
+
 ## Completed: Local Test Workflow ✅
 - `npm run check` runs typecheck + build + runtime:build
 - `npm run runtime:dev` starts the runtime with hot reload

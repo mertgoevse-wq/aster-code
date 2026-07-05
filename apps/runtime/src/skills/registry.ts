@@ -4,6 +4,75 @@ import { SkillDefinition } from '@aster-code/shared';
  * Built-in skill definitions for the MVP.
  * These are the authoritative skill definitions used by the runtime.
  */
+// Placeholder skill candidates from external research — no code imported.
+// See docs/SKILL_CANDIDATE_MATRIX.md for full details.
+const RESEARCH_CANDIDATES: SkillDefinition[] = [
+  {
+    id: 'alignment-checker',
+    name: 'Alignment Checker',
+    description: 'Grills the user to validate agent plan matches original intent before execution. Inspired by mattpocock/skills.',
+    permissions: ['read_workspace'],
+    executionMode: 'ask',
+    status: 'inactive',
+  },
+  {
+    id: 'spec-writer',
+    name: 'Spec Writer',
+    description: 'Generates formal specifications before coding; validates plan completeness. Inspired by addyosmani/agent-skills and obra/superpowers.',
+    permissions: ['read_workspace', 'write_workspace'],
+    executionMode: 'auto',
+    status: 'inactive',
+  },
+  {
+    id: 'design-system-builder',
+    name: 'Design System Builder',
+    description: 'Generates Tailwind design tokens and component patterns from design requirements. Inspired by nextlevelbuilder/ui-ux-pro-max-skill.',
+    permissions: ['read_workspace', 'write_workspace'],
+    executionMode: 'ask',
+    status: 'inactive',
+  },
+  {
+    id: 'prompt-optimizer',
+    name: 'Prompt Optimizer',
+    description: 'Tests and refines system prompts using regression testing patterns. Inspired by ai-boost/awesome-prompts.',
+    permissions: ['read_workspace', 'write_workspace'],
+    executionMode: 'ask',
+    status: 'inactive',
+  },
+  {
+    id: 'token-compressor',
+    name: 'Token Compressor',
+    description: 'Reduces verbose agent output while preserving technical accuracy. Inspired by JuliusBrussee/caveman.',
+    permissions: ['read_workspace'],
+    executionMode: 'auto',
+    status: 'inactive',
+  },
+  {
+    id: 'security-scanner',
+    name: 'Security Scanner',
+    description: 'Scans workspace for credential leaks, unsafe patterns, and path traversal risks. Inspired by affaan-m/ECC.',
+    permissions: ['read_workspace'],
+    executionMode: 'auto',
+    status: 'inactive',
+  },
+  {
+    id: 'memory-optimizer',
+    name: 'Memory Optimizer',
+    description: 'Optimizes agent context window usage by summarizing non-critical information. Inspired by affaan-m/ECC.',
+    permissions: ['read_workspace'],
+    executionMode: 'auto',
+    status: 'inactive',
+  },
+  {
+    id: 'prompt-validator',
+    name: 'Prompt Validator',
+    description: 'Validates system prompts against best practices; suggests improvements. Inspired by brexhq/prompt-engineering and dair-ai/Prompt-Engineering-Guide.',
+    permissions: ['read_workspace'],
+    executionMode: 'auto',
+    status: 'inactive',
+  },
+];
+
 const BUILTIN_SKILLS: SkillDefinition[] = [
   {
     id: 'project-planner',
@@ -87,7 +156,10 @@ class SkillsRegistry {
     for (const skill of BUILTIN_SKILLS) {
       this.skills.set(skill.id, { ...skill });
     }
-    console.log(`[SkillsRegistry] Initialized with ${this.skills.size} built-in skills.`);
+    for (const skill of RESEARCH_CANDIDATES) {
+      this.skills.set(skill.id, { ...skill });
+    }
+    console.log(`[SkillsRegistry] Initialized with ${BUILTIN_SKILLS.length} built-in + ${RESEARCH_CANDIDATES.length} candidate skills.`);
   }
 
   /**

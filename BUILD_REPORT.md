@@ -12,6 +12,16 @@ Status: SUCCESS — All builds pass cleanly
 4. `npm run build` — 0 errors
 5. `npm run runtime:build` — 0 errors
 
+## External Repo Research
+- Analyzed 29 repos from GitHub star list (12 cloned, 17 reviewed from metadata)
+- Created `docs/EXTERNAL_REPO_RESEARCH.md` — detailed analysis of all repos
+- Created `docs/SKILL_CANDIDATE_MATRIX.md` — 12 new skill proposals across 3 tiers
+- Created `docs/REPO_LICENSE_REVIEW.md` — license assessment (14 MIT, 3 Apache 2.0, 2 GPL, 3 leaked)
+- Created `docs/EXTERNAL_REPO_IMPORT_QUEUE.md` — tracking queue
+- Added 8 placeholder skill candidates to `apps/runtime/src/skills/registry.ts` (all `inactive`)
+- 3 repos rejected (leaked proprietary content); 2 marked irrelevant
+- No external code imported — all entries are original descriptions
+
 ## Local Test Workflow
 - Added `npm run check` script: runs typecheck + build + runtime:build
 - Added `npm run runtime:dev` alias (same as `dev:runtime`)
