@@ -14,30 +14,13 @@ A calm, Claude-inspired coding-agent studio combining:
 - `docs/`: In-depth documentation on architecture, security, skills, and model registry.
 
 ## Setup and Quick Start
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-2. Run the full check suite:
-   ```bash
-   npm run check
-   ```
-3. Start the runtime server (terminal 1):
-   ```bash
-   npm run runtime:dev
-   ```
-4. Start the web frontend (terminal 2):
-   ```bash
-   npm run dev:web
-   ```
-5. Open http://localhost:5173 in your browser.
-
-### Desktop App (Electron)
 
 ```bash
-# All-in-one: runtime + web + desktop
-npm run app:dev
+npm install       # Install dependencies
+npm run app:dev   # Start everything (runtime + web + desktop)
 ```
 
-> See **[docs/LOCAL_TESTING.md](docs/LOCAL_TESTING.md)** for detailed Windows PowerShell instructions and a smoke test checklist.
-> See **[docs/DESKTOP_APP.md](docs/DESKTOP_APP.md)** for Electron desktop setup, scripts, and troubleshooting.
+Then open **http://localhost:5173** in your browser, or use the Electron window that opens.
+
+> See **[docs/START_HERE.md](docs/START_HERE.md)** for a step-by-step beginner guide with troubleshooting.
+> See **[docs/DESKTOP_APP.md](docs/DESKTOP_APP.md)** for Electron desktop packaging details.

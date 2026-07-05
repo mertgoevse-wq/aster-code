@@ -20,8 +20,8 @@
     "desktop:dev": "npm run dev --workspace=apps/desktop",
     "desktop:build": "npm run build --workspace=apps/desktop",
     "desktop:dist": "npm run build --workspace=apps/web && npm run build --workspace=apps/desktop && npm run dist --workspace=apps/desktop",
-    "app:dev": "concurrently \"npm run dev:runtime\" \"npm run dev:web\" \"npm run desktop:dev\"",
-    "app:build": "npm run build && npm run runtime:build && npm run desktop:build"
+    "app:dev": "concurrently -n RT,WEB,DSK -c cyan,magenta,yellow \"npm run dev:runtime\" \"npm run dev:web\" \"npm run desktop:dev\"",
+    "app:build": "npm run typecheck && npm run build && npm run desktop:build"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

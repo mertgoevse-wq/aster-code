@@ -86,6 +86,12 @@ The agent loop architecture is in place but execution is simulated. The next pro
 - 8 placeholder skill candidates added to registry (all `inactive`)
 - See `docs/SKILL_CANDIDATE_MATRIX.md` for Tier 1 priority candidates
 
+## Completed: Dev Workflow ✅
+- `app:dev` uses colored concurrent output (RT/WEB/DSK prefixes)
+- `app:build` includes typecheck + all builds
+- `scripts/dev-start.mjs` — welcome banner wrapper
+- `docs/START_HERE.md` — 4-step beginner guide
+
 ## Completed: Electron Desktop App ✅
 - `apps/desktop/` workspace with Electron + electron-builder
 - Main process, preload, window factory — secure defaults

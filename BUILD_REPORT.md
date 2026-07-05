@@ -12,6 +12,14 @@ Status: SUCCESS — All builds pass cleanly
 4. `npm run build` — 0 errors
 5. `npm run runtime:build` — 0 errors
 
+## Dev Workflow Improvements
+- `app:dev` now uses named concurrent prefixes (`-n RT,WEB,DSK`) with colored output (`-c cyan,magenta,yellow`) for clear terminal output
+- `app:build` fixed: includes typecheck step, removed redundant `runtime:build` (already covered by `npm run build`)
+- `scripts/dev-start.mjs`: thin wrapper around concurrently with welcome banner showing all URLs
+- `docs/START_HERE.md`: 4-step getting started guide (cd → npm install → npm run app:dev → test)
+- Removed duplicate `dev:desktop` alias — use `desktop:dev`
+- README.md updated with desktop app quick start
+
 ## Electron Desktop App Shell
 - Created `apps/desktop/` workspace with Electron + electron-builder
 - 4 source files: `main.ts` (main process), `preload.ts` (secure bridge), `window.ts` (BrowserWindow factory), `tsconfig.json` (CommonJS)

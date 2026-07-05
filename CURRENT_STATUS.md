@@ -56,6 +56,7 @@ aster-code/
 17. **🆕 MCP Gateway** — Governed MCP server registry (4 default servers, all disabled), tool discovery with policy filtering, 5-layer access control, audit logging, mcpo OpenAPI bridge placeholder
 18. **🆕 Auth Scaffolding** — GitHub/Google OAuth scaffold (placeholders), local-first mode always works, session store, CSRF state generation, auth section in Settings
 19. **🆕 Electron Desktop App** — Electron shell wraps web UI, 1440×900, ivory theme, secure preload, electron-builder NSIS packaging
+20. **🆕 One-command workflow** — `npm run app:dev` starts all 3 servers with colored labels; `docs/START_HERE.md` beginner guide
 
 ### MCP Gateway API Endpoints
 1. **Server management** — `GET/POST/PATCH/DELETE /mcp/servers` for MCP server config CRUD
