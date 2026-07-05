@@ -16,6 +16,7 @@
     "runtime:build": "npm run build --workspace=apps/runtime",
     "dev": "concurrently \"npm run dev:runtime\" \"npm run dev:web\"",
     "start": "npm run start --workspace=apps/runtime",
+    "release:local": "npm run check && npm run app:build && npm run desktop:dist && npm run desktop:smoke",
     "check": "npm run typecheck && npm run build && npm run runtime:build && npm run desktop:build",
     "desktop:smoke": "node scripts/desktop-smoke.mjs",
     "desktop:dev": "npm run dev --workspace=apps/desktop",

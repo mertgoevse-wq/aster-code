@@ -13,8 +13,9 @@ A calm, Claude-inspired coding-agent studio combining:
 - `apps/desktop`: Electron desktop app with auto-runtime management.
 - `packages/shared`: Shared types and interfaces.
 - `docs/`: In-depth documentation on architecture, security, skills, and model registry.
+- `release-notes/`: Versioned release notes.
 
-## Setup and Quick Start
+## Quick Start (Development)
 
 ```bash
 npm install       # Install dependencies
@@ -23,6 +24,25 @@ npm run app:dev   # Start everything (runtime + web + desktop)
 
 Then open **http://localhost:5173** in your browser, or use the Electron window that opens.
 
-> See **[docs/START_HERE.md](docs/START_HERE.md)** for a step-by-step beginner guide with troubleshooting.
-> See **[docs/DESKTOP_APP.md](docs/DESKTOP_APP.md)** for Electron desktop packaging and runtime management details.
-> See **[docs/DESKTOP_RUNTIME.md](docs/DESKTOP_RUNTIME.md)** for runtime IPC API and lifecycle documentation.
+## Build Windows Installer
+
+```bash
+npm run release:local   # Full pipeline: check → build → package → verify
+```
+
+Outputs:
+- **Installer:** `apps/desktop/dist-electron/Aster Code Setup 0.1.0.exe` (~77 MB)
+- **Portable:** `apps/desktop/dist-electron/win-unpacked/Aster Code.exe` (~178 MB)
+
+See **[docs/RELEASE_PACKAGE.md](docs/RELEASE_PACKAGE.md)** for full install/run/uninstall instructions.
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| **[docs/START_HERE.md](docs/START_HERE.md)** | Beginner step-by-step guide with troubleshooting |
+| **[docs/DESKTOP_APP.md](docs/DESKTOP_APP.md)** | Electron desktop packaging and runtime management |
+| **[docs/DESKTOP_RUNTIME.md](docs/DESKTOP_RUNTIME.md)** | Runtime IPC API and lifecycle documentation |
+| **[docs/WINDOWS_INSTALLER_TEST.md](docs/WINDOWS_INSTALLER_TEST.md)** | Installer smoke test checklist (17 items) |
+| **[docs/RELEASE_PACKAGE.md](docs/RELEASE_PACKAGE.md)** | Build, install, run, uninstall, and logs guide |
+| **[release-notes/0.1.0.md](release-notes/0.1.0.md)** | v0.1.0 release notes |

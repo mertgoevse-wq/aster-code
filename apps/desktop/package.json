@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Aster Code Desktop Application (Electron)",
+  "author": "Aster Code",
   "main": "./dist/main.js",
   "scripts": {
     "dev": "tsc && electron .",
@@ -26,7 +27,9 @@
         "from": "../web/dist",
         "to": "web/dist",
         "filter": [
-          "**/*"
+          "**/*",
+          "!**/.env",
+          "!**/.env.*"
         ]
       },
       {
@@ -34,6 +37,8 @@
         "to": "runtime/dist",
         "filter": [
           "**/*",
+          "!**/.env",
+          "!**/.env.*",
           "!**/*.map"
         ]
       },
@@ -46,6 +51,8 @@
         "to": "runtime/node_modules",
         "filter": [
           "**/*",
+          "!**/.env",
+          "!**/.env.*",
           "!**/*.map"
         ]
       }

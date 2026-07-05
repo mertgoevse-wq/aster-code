@@ -44,7 +44,15 @@ aster-code/
 
 ## What Works ✅
 
-### First-Run Experience (New)
+### Release Pipeline (New)
+1. **✅ `npm run release:local`** — One-command pipeline: check → app:build → desktop:dist → smoke
+2. **✅ Windows Installer** — NSIS installer at `dist-electron/Aster Code Setup 0.1.0.exe` (77 MB)
+3. **✅ Portable EXE** — Unpacked at `dist-electron/win-unpacked/Aster Code.exe` (178 MB)
+4. **✅ No secrets leaked** — `.env` exclusion filters on all extraResources
+5. **✅ `docs/RELEASE_PACKAGE.md`** — Install/run/uninstall/logs guide
+6. **✅ `release-notes/0.1.0.md`** — What works, simulated, limitations, roadmap
+
+### First-Run Experience
 1. **✅ Welcome Banner** — Shows on first visit: onboarding, What Works Now, Coming Next, MVP limitations
 2. **✅ Suggested Prompts** — 3 one-click prompts: "explain this project", "create a hello world app", "add a dark mode toggle"
 3. **✅ Dismiss Persistence** — Welcome banner dismisses permanently via localStorage
@@ -105,3 +113,7 @@ aster-code/
 | 11 | WelcomeBanner shows on first visit? | ✅ Yes — onboarding, What Works Now, Coming Next, limitations |
 | 12 | LLM disconnected indicator visible? | ✅ Yes — amber badge in status bar |
 | 13 | Stubbed features clearly marked? | ✅ Yes — disabled OAuth buttons, limitations panel, status badge |
+| 14 | `npm run release:local` works? | ✅ Yes — check → app:build → desktop:dist → smoke all pass |
+| 15 | No .env/secrets in packaged output? | ✅ Yes — exclusion filters, verified clean |
+| 16 | `docs/RELEASE_PACKAGE.md` exists? | ✅ Yes — install/run/uninstall/logs guide |
+| 17 | `release-notes/0.1.0.md` exists? | ✅ Yes — what works, simulated, limitations, roadmap |
