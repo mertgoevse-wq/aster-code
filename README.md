@@ -18,19 +18,18 @@ A calm, Claude-inspired coding-agent studio combining:
    ```bash
    npm install
    ```
-2. Copy env parameters:
+2. Run the full check suite:
    ```bash
-   cp .env.example apps/runtime/.env
+   npm run check
    ```
-3. Run the development server (runs backend on 3001 and frontend on 5173):
+3. Start the runtime server (terminal 1):
    ```bash
-   npm run dev
+   npm run runtime:dev
    ```
-4. Verify tests and typechecks:
+4. Start the web frontend (terminal 2):
    ```bash
-   npm run typecheck
+   npm run dev:web
    ```
-5. Build production bundle:
-   ```bash
-   npm run build
-   ```
+5. Open http://localhost:5173 in your browser.
+
+> See **[docs/LOCAL_TESTING.md](docs/LOCAL_TESTING.md)** for detailed Windows PowerShell instructions and a smoke test checklist.

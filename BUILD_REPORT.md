@@ -1,19 +1,24 @@
 # Aster Code Agent Loop MVP Build Report
 
-Date: 2026-07-05 (stabilized)
+Date: 2026-07-05 (stabilized + local test workflow)
 Status: SUCCESS — All builds pass cleanly
 
 ## Commands Run
-1. `npm run typecheck`
-   - Outcome: All 3 workspaces typecheck with **0 errors**.
-2. `npm run build`
-   - Outcome: Built all workspaces. Vite production bundle completed. **0 errors**.
-3. `npm run runtime:build`
-   - Outcome: Compiled Express backend server agent modules into `dist/`. **0 errors**.
+1. `npm install`
+   - Outcome: 262 packages, up to date. 2 npm warnings (esbuild scripts), 2 vulnerabilities.
+2. `npm run check`
+   - Outcome: typecheck (0 errors), build (0 errors), runtime:build (0 errors) — ALL PASS
+3. `npm run typecheck` — 0 errors
+4. `npm run build` — 0 errors
+5. `npm run runtime:build` — 0 errors
 
-## Stabilization Pass
-- Verified post-commit state: typecheck, build, runtime:build all clean
-- No TypeScript errors, import issues, or build failures
+## Local Test Workflow
+- Added `npm run check` script: runs typecheck + build + runtime:build
+- Added `npm run runtime:dev` alias (same as `dev:runtime`)
+- Created `docs/LOCAL_TESTING.md` with Windows PowerShell instructions
+- Smoke test checklist: app opens, navigation, chat, workbench, models, skills, settings, health endpoint
+- Troubleshooting section: port conflicts, install issues, TypeScript cache
+- Updated `README.md` with streamlined quick start and link to testing guide
 - Agent module (`apps/runtime/src/agent/`) compiles correctly
 - Frontend components (`AgentActivityFeed`, `AgentPlanPanel`) compile correctly
 - ChatScreen and SkillsScreen integrate with backend APIs without type errors

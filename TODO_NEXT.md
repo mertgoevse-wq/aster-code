@@ -52,3 +52,10 @@ The agent loop architecture is in place but execution is simulated. The next pro
 - Test the session store (CRUD operations)
 - Test the policies engine (permission checks)
 - Test the skills registry and runner
+
+---
+
+## Completed: Local Test Workflow ✅
+- `npm run check` runs typecheck + build + runtime:build
+- `npm run runtime:dev` starts the runtime with hot reload
+- `docs/LOCAL_TESTING.md` has Windows PowerShell instructions and smoke test checklist
