@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-ivory-50 text-ivory-800 font-sans selection:bg-sand-200 selection:text-sand-900;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-sans font-semibold tracking-tight text-ivory-900;
+  }
+}
+
+/* Custom Scrollbar for a clean notebook look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #EBE5DC;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #C5B9A5;
+}
+
+/* Glassmorphism/Clay card styling helpers */
+.ivory-card {
+  @apply bg-white border border-ivory-200 rounded-xl shadow-soft;
+}
+
+.ivory-input {
+  @apply bg-ivory-50/50 border border-ivory-200 rounded-lg px-3 py-2 text-sm text-ivory-800 placeholder-ivory-400 focus:outline-none focus:border-clay focus:ring-1 focus:ring-clay/30 transition-all duration-200;
+}
+
+.ivory-btn-primary {
+  @apply bg-[#866854] text-white hover:bg-[#725441] active:bg-[#604432] font-medium text-sm px-4 py-2 rounded-lg shadow-border-glow transition-all duration-200 flex items-center justify-center gap-2;
+}
+
+.ivory-btn-secondary {
+  @apply bg-white hover:bg-ivory-100 text-ivory-700 border border-ivory-200 hover:border-ivory-300 font-medium text-sm px-4 py-2 rounded-lg transition-all duration-200 flex items-center justify-center gap-2;
+}
+
+/* Muted focus outlines for custom components */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-clay/30 focus:border-clay;
+}
