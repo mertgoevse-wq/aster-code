@@ -36,7 +36,14 @@ The agent loop architecture is in place but execution is simulated. The next pro
 
 ## Medium Priority
 
-### Step 5: Real MCP Execution
+### Step 5: Implement Real OAuth Flow
+- **File**: `apps/runtime/src/auth/githubOAuth.ts`, `googleOAuth.ts`
+- **Action**: Implement token exchange (code → access_token), user profile fetch, session creation
+- Add CSRF state validation (store generated states, verify on callback)
+- Add PKCE support for web/client-side flows
+- Enable login buttons in SettingsScreen when OAuth is configured
+
+### Step 6: Real MCP Execution
 - **File**: `apps/runtime/src/mcp/gateway.ts`
 - **Action**: Replace mock tool generation with real MCP JSON-RPC tool discovery
 - Implement stdio process management for local MCP servers
@@ -74,6 +81,16 @@ The agent loop architecture is in place but execution is simulated. The next pro
 - `docs/EXTERNAL_REPO_RESEARCH.md`, `SKILL_CANDIDATE_MATRIX.md`, `REPO_LICENSE_REVIEW.md`
 - 8 placeholder skill candidates added to registry (all `inactive`)
 - See `docs/SKILL_CANDIDATE_MATRIX.md` for Tier 1 priority candidates
+
+## Completed: Auth Scaffolding ✅
+- `apps/runtime/src/auth/types.ts` — Auth types
+- `apps/runtime/src/auth/oauthConfig.ts` — GitHub + Google OAuth config
+- `apps/runtime/src/auth/sessionStore.ts` — In-memory auth session store
+- `apps/runtime/src/auth/githubOAuth.ts` — GitHub OAuth handler (placeholder)
+- `apps/runtime/src/auth/googleOAuth.ts` — Google OAuth handler (placeholder)
+- 6 new API endpoints: status, logout, github/start, google/start, callback
+- Frontend SettingsScreen: auth section with disabled login buttons, local-first indicator
+- `docs/AUTH_ARCHITECTURE.md` — Full architecture documentation
 
 ## Completed: MCP Gateway Scaffold ✅
 - `apps/runtime/src/mcp/types.ts` — Internal MCP types

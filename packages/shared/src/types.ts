@@ -265,3 +265,47 @@ export interface AgentEvent {
   toolName?: string;
   timestamp: string;
 }
+
+/* ==========================================================================
+   AUTH TYPES
+   ========================================================================== */
+
+export type AuthProvider = 'github' | 'google';
+
+export type AuthMode = 'local' | 'authenticated';
+
+export interface AuthStatus {
+  authenticated: boolean;
+  mode: AuthMode;
+  provider?: AuthProvider;
+  user?: AuthUser;
+  sessionExpiresAt?: string;
+  features: AuthFeatures;
+}
+
+export interface AuthUser {
+  id: string;
+  provider: AuthProvider;
+  username: string;
+  displayName: string;
+  avatarUrl?: string;
+  email?: string;
+}
+
+export interface AuthFeatures {
+  githubRepoSync: boolean;
+  googleDriveSync: boolean;
+  cloudSettingsSync: boolean;
+  remoteProjects: boolean;
+}
+
+export interface AuthSession {
+  id: string;
+  userId: string;
+  provider: AuthProvider;
+  accessToken: string;
+  refreshToken?: string;
+  expiresAt: string;
+  createdAt: string;
+  scopes: string[];
+}

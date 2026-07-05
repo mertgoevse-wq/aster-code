@@ -12,6 +12,20 @@ Status: SUCCESS — All builds pass cleanly
 4. `npm run build` — 0 errors
 5. `npm run runtime:build` — 0 errors
 
+## Auth Scaffolding (GitHub + Google OAuth)
+- Created `apps/runtime/src/auth/` module with 5 files:
+  - `types.ts` — Auth types (OAuthConfig, StoredSession, TokenExchangeResult)
+  - `oauthConfig.ts` — OAuth config for GitHub and Google, env var loading, authorize URL generation
+  - `sessionStore.ts` — In-memory auth session store (no persistent storage, no plaintext tokens on disk)
+  - `githubOAuth.ts` — GitHub OAuth handler (placeholder: config validation + authorize URL implemented, token exchange not yet)
+  - `googleOAuth.ts` — Google OAuth handler (placeholder: config validation + authorize URL implemented, token exchange not yet)
+- 6 new API endpoints: GET /auth/status, POST /auth/logout, GET /auth/github/start, GET /auth/google/start, GET /auth/callback
+- `docs/AUTH_ARCHITECTURE.md` — Full architecture with local-first mode, OAuth flows, token storage rules, platform differences
+- Frontend SettingsScreen: auth section with GitHub/Google login buttons (disabled), local-first mode indicator, feature grid, session storage explanation
+- No secrets in frontend: all OAuth credentials are runtime `.env` only
+- Shared types added: AuthStatus, AuthUser, AuthFeatures, AuthSession, AuthProvider, AuthMode
+- Updated `docs/SECURITY.md` with auth security section
+
 ## MCP Gateway Scaffolding
 - Created `apps/runtime/src/mcp/` module with 5 files:
   - `types.ts` — Internal MCP types (ToolDiscoveryRequest, GatewayInvokeResult, etc.)

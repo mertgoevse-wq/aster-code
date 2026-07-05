@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  Key, Database, Trash2, Edit3, AlertCircle, ShieldAlert,
-  ToggleLeft, ToggleRight, Copy, Download, Upload, X, Tag, Star, FileJson
+  Key, Database, Trash2, Edit3, AlertCircle, ShieldAlert, Github, Chrome,
+  ToggleLeft, ToggleRight, Copy, Download, Upload, X, Tag, Star, FileJson, Shield
 } from 'lucide-react';
 import { SystemPromptTemplate, ProviderConfigs } from '@aster-code/shared';
 
@@ -339,7 +339,7 @@ export default function SettingsScreen({ runtimeConnected, onUpdateConfigs }: Se
       </div>
 
       <div className="grid grid-cols-2 gap-8 items-start">
-        {/* Left Column: API Keys & Local Endpoints */}
+        {/* Left Column: API Keys, Local Endpoints, Auth */}
         <div className="bg-white border border-ivory-200 rounded-xl p-6 shadow-soft space-y-6">
           <div className="flex justify-between items-center border-b border-ivory-100 pb-3">
             <h2 className="text-sm font-bold text-ivory-800 flex items-center gap-2">
@@ -416,6 +416,113 @@ LMSTUDIO_BASE_URL=http://localhost:1234/v1
 OPENROUTER_API_KEY=your_key_here
 NVIDIA_API_KEY=your_key_here`}
             </pre>
+          </div>
+
+          {/* ─── Auth Section ─── */}
+          <div className="border-t border-ivory-100 pt-6 space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-sm font-bold text-ivory-800 flex items-center gap-2">
+                <Shield className="w-4 h-4 text-[#866854]" />
+                Authentication
+              </h2>
+              <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 border border-emerald-100 rounded-full font-semibold flex items-center gap-1">
+                <Shield className="w-3 h-3" />
+                Local-first mode active
+              </span>
+            </div>
+
+            <p className="text-[11px] text-ivory-500 leading-relaxed">
+              Aster Code works fully offline. Login is <strong>optional</strong> and unlocks GitHub repo sync, cloud settings backup, and remote project storage (future).
+            </p>
+
+            {/* GitHub Login */}
+            <div className="p-4 bg-ivory-50/50 rounded-xl border border-ivory-200/80 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 bg-[#24292f] rounded-lg flex items-center justify-center">
+                    <Github className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-ivory-800">Login with GitHub</h3>
+                    <p className="text-[10px] text-ivory-500">
+                      {runtimeConnected ? 'Not configured — set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in .env' : 'Runtime offline'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  disabled
+                  className="text-[10px] font-semibold bg-ivory-200 text-ivory-400 px-3 py-1.5 rounded-lg cursor-not-allowed flex items-center gap-1.5"
+                  title="GitHub OAuth is not implemented yet. See docs/AUTH_ARCHITECTURE.md."
+                >
+                  <Github className="w-3 h-3" />
+                  Login
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {['repo sync', 'repo push', 'PR creation'].map(f => (
+                  <span key={f} className="text-[9px] px-1.5 py-0.5 rounded border border-ivory-200 bg-white text-ivory-400 font-mono opacity-50">{f}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* Google Login */}
+            <div className="p-4 bg-ivory-50/50 rounded-xl border border-ivory-200/80 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 bg-white border border-ivory-200 rounded-lg flex items-center justify-center">
+                    <Chrome className="w-5 h-5 text-[#4285F4]" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-ivory-800">Login with Google</h3>
+                    <p className="text-[10px] text-ivory-500">
+                      {runtimeConnected ? 'Not configured — set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env' : 'Runtime offline'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  disabled
+                  className="text-[10px] font-semibold bg-ivory-200 text-ivory-400 px-3 py-1.5 rounded-lg cursor-not-allowed flex items-center gap-1.5"
+                  title="Google OAuth is not implemented yet. See docs/AUTH_ARCHITECTURE.md."
+                >
+                  <Chrome className="w-3 h-3" />
+                  Login
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {['settings sync', 'Drive integration', 'remote storage'].map(f => (
+                  <span key={f} className="text-[9px] px-1.5 py-0.5 rounded border border-ivory-200 bg-white text-ivory-400 font-mono opacity-50">{f}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* Features unlocked info */}
+            <div className="bg-ivory-50/70 rounded-xl border border-ivory-200/60 p-4 space-y-2">
+              <h4 className="text-[10px] font-bold text-ivory-600 uppercase tracking-wider">What Auth Unlocks</h4>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { label: 'GitHub Repo Sync', icon: '🐙', unlocked: false },
+                  { label: 'Cloud Settings Sync', icon: '☁️', unlocked: false },
+                  { label: 'Google Drive Integration', icon: '📁', unlocked: false },
+                  { label: 'Remote Projects', icon: '🌐', unlocked: false },
+                ].map(f => (
+                  <div key={f.label} className="flex items-center gap-2 text-[10px] text-ivory-400">
+                    <span className="opacity-40">{f.icon}</span>
+                    <span>{f.label}</span>
+                    <span className="text-[9px] bg-ivory-200 text-ivory-400 px-1 rounded ml-auto">soon</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Session persistence note */}
+            <div className="text-[10px] leading-relaxed text-ivory-400 bg-ivory-50/50 p-3 border border-ivory-100 rounded-lg">
+              <span className="font-semibold text-ivory-600 block mb-0.5">🔒 Session Storage</span>
+              Sessions are in-memory only (lost on server restart). Future versions will use encrypted local storage with OS keychain integration. No tokens are ever stored in the browser.
+            </div>
+
+            <p className="text-[9px] text-ivory-400 italic">
+              See <code className="bg-ivory-100 px-1 rounded">docs/AUTH_ARCHITECTURE.md</code> for full OAuth implementation roadmap.
+            </p>
           </div>
         </div>
 

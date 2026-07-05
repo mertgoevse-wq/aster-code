@@ -19,6 +19,17 @@ import { executeApprovedPlan } from './agent/loop.js';
 import { skillsRegistry } from './skills/registry.js';
 import { mcpServerRegistry } from './mcp/registry.js';
 import { discoverTools, discoverAllTools, invokeTool, getAuditLog, clearAuditLog } from './mcp/gateway.js';
+import { authSessionStore } from './auth/sessionStore.js';
+import {
+  canStartGitHubOAuth,
+  getGitHubAuthUrl,
+  handleGitHubCallback,
+} from './auth/githubOAuth.js';
+import {
+  canStartGoogleOAuth,
+  getGoogleAuthUrl,
+  handleGoogleCallback,
+} from './auth/googleOAuth.js';
 
 dotenv.config();
 
@@ -585,6 +596,143 @@ app.delete('/mcp/audit', async (req, res) => {
   try {
     await clearAuditLog();
     res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/* ==========================================================================
+   AUTH ENDPOINTS (MVP: placeholder only, not fully implemented)
+   ========================================================================== */
+
+// GET /auth/status — Current authentication status
+app.get('/auth/status', (req, res) => {
+  try {
+    const isLoggedIn = authSessionStore.isAuthenticated();
+    const activeSession = authSessionStore.getActiveSession();
+
+    res.json({
+      success: true,
+      authenticated: isLoggedIn,
+      mode: isLoggedIn ? 'authenticated' : 'local',
+      provider: activeSession?.session.provider || null,
+      user: activeSession?.user || null,
+      features: {
+        githubRepoSync: false,
+        googleDriveSync: false,
+        cloudSettingsSync: false,
+        remoteProjects: false,
+      },
+      message: 'Auth is scaffolded but full OAuth flow is not implemented yet.',
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /auth/logout — End the current auth session
+app.post('/auth/logout', (req, res) => {
+  try {
+    authSessionStore.clearAll();
+    res.json({
+      success: true,
+      message: 'All auth sessions cleared. Returned to local-first mode.',
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /auth/github/start — Initiate GitHub OAuth flow
+app.get('/auth/github/start', (req, res) => {
+  try {
+    const { canStart, reason } = canStartGitHubOAuth();
+
+    if (!canStart) {
+      return res.status(400).json({
+        success: false,
+        error: reason,
+        message: 'GitHub OAuth is not configured. Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in .env file under apps/runtime/.',
+      });
+    }
+
+    // Generate state parameter for CSRF protection
+    const state = Buffer.from(JSON.stringify({
+      provider: 'github',
+      timestamp: Date.now(),
+      nonce: Math.random().toString(36).slice(2),
+    })).toString('base64');
+
+    const authUrl = getGitHubAuthUrl(state);
+    res.json({ success: true, authUrl, state });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /auth/google/start — Initiate Google OAuth flow
+app.get('/auth/google/start', (req, res) => {
+  try {
+    const { canStart, reason } = canStartGoogleOAuth();
+
+    if (!canStart) {
+      return res.status(400).json({
+        success: false,
+        error: reason,
+        message: 'Google OAuth is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env file under apps/runtime/.',
+      });
+    }
+
+    // Generate state parameter for CSRF protection
+    const state = Buffer.from(JSON.stringify({
+      provider: 'google',
+      timestamp: Date.now(),
+      nonce: Math.random().toString(36).slice(2),
+    })).toString('base64');
+
+    const authUrl = getGoogleAuthUrl(state);
+    res.json({ success: true, authUrl, state });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /auth/callback — OAuth callback handler (GitHub and Google)
+app.get('/auth/callback', async (req, res) => {
+  try {
+    const { code, state } = req.query as { code?: string; state?: string };
+
+    if (!code || !state) {
+      return res.status(400).json({ success: false, error: 'Missing code or state parameter.' });
+    }
+
+    // Decode state to determine provider
+    let provider: string;
+    try {
+      const decoded = JSON.parse(Buffer.from(state, 'base64').toString());
+      provider = decoded.provider;
+    } catch {
+      return res.status(400).json({ success: false, error: 'Invalid state parameter.' });
+    }
+
+    let result;
+    if (provider === 'github') {
+      result = await handleGitHubCallback(code, state);
+    } else if (provider === 'google') {
+      result = await handleGoogleCallback(code, state);
+    } else {
+      return res.status(400).json({ success: false, error: `Unknown provider: ${provider}` });
+    }
+
+    if (result.success) {
+      res.json({ success: true, user: result.user, message: result.message });
+    } else {
+      res.json({
+        success: false,
+        error: result.message,
+        hint: 'OAuth callback received successfully but full token exchange is not implemented yet. This is expected in MVP.',
+      });
+    }
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }

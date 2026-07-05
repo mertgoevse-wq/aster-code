@@ -45,3 +45,29 @@ Each skill maps to a permission level based on its required scopes:
 | + `execute_commands` | `run-safe-commands-after-approval` |
 
 Skills with `executionMode: 'ask'` require additional explicit approval before running, even at low permission levels.
+
+### 7. Authentication Security
+
+Aster Code supports **optional** OAuth login (GitHub, Google) for cloud features. Auth is never required for local use.
+
+- **Local-first by default**: The full application works without login. Auth only unlocks cloud integrations.
+- **No OAuth secrets in frontend**: Client secrets are runtime `.env` only. The frontend only receives public client IDs.
+- **CSRF protection**: OAuth flows use signed state tokens with nonce + timestamp to prevent replay attacks.
+- **Token storage rules**:
+  - Access tokens NEVER stored in plaintext on disk
+  - MVP: tokens in-memory only (lost on restart)
+  - Future: encrypted at rest using OS keychain / Android Keystore
+  - No tokens ever in browser localStorage, sessionStorage, or cookies accessible to JavaScript
+- **Scoped permissions**: Only minimum required OAuth scopes are requested
+- **No login wall**: The app cannot be locked behind authentication — local mode always works
+- **MVP status**: OAuth endpoints are scaffolded but token exchange is not implemented yet
+
+### Auth Endpoint Security
+
+| Endpoint | Auth Required | Notes |
+|----------|--------------|-------|
+| GET `/auth/status` | No | Returns current auth state, never exposes tokens |
+| POST `/auth/logout` | No | Clears in-memory session |
+| GET `/auth/github/start` | No | Returns authorize URL, state param for CSRF |
+| GET `/auth/google/start` | No | Returns authorize URL, state param for CSRF |
+| GET `/auth/callback` | No | Validates state, exchanges code (placeholder) |
