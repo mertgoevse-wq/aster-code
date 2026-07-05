@@ -162,6 +162,50 @@ export interface RoutingSettings {
   requireApprovalMcp: boolean;
 }
 
+/* ==========================================================================
+   MCP GATEWAY TYPES
+   ========================================================================== */
+
+export type MCPTransportType = 'stdio' | 'http' | 'sse' | 'mcpo-openapi';
+
+export interface MCPServerConfig {
+  id: string;
+  name: string;
+  transport: MCPTransportType;
+  command?: string;
+  url?: string;
+  enabled: boolean;
+  riskLevel: RiskLevel;
+  allowedTools: string[];
+  blockedTools: string[];
+  requiresApproval: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MCPToolDefinition {
+  name: string;
+  description: string;
+  serverId: string;
+  serverName: string;
+  inputSchema?: Record<string, any>;
+  riskLevel: RiskLevel;
+  category: 'read' | 'write' | 'network' | 'compute' | 'system' | 'unknown';
+  requiresApproval: boolean;
+  allowed: boolean;
+}
+
+export interface MCPAuditEntry {
+  id: string;
+  serverId: string;
+  toolName: string;
+  timestamp: string;
+  inputSummary: string;
+  resultStatus: 'success' | 'error' | 'blocked' | 'pending-approval';
+  userApproved: boolean;
+  error?: string;
+}
+
 export type PermissionLevel =
   | 'read-only'
   | 'suggest-edits'

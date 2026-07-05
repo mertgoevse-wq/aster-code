@@ -36,7 +36,14 @@ The agent loop architecture is in place but execution is simulated. The next pro
 
 ## Medium Priority
 
-### Step 5: Session Persistence
+### Step 5: Real MCP Execution
+- **File**: `apps/runtime/src/mcp/gateway.ts`
+- **Action**: Replace mock tool generation with real MCP JSON-RPC tool discovery
+- Implement stdio process management for local MCP servers
+- Add real tool invocation routing through the gateway
+- Add persistent audit log storage (SQLite or file-based)
+
+### Step 6: Session Persistence
 - Replace in-memory `sessionStore` with file-based or SQLite storage
 - Add session list endpoint (`GET /agent/sessions`)
 
@@ -67,6 +74,15 @@ The agent loop architecture is in place but execution is simulated. The next pro
 - `docs/EXTERNAL_REPO_RESEARCH.md`, `SKILL_CANDIDATE_MATRIX.md`, `REPO_LICENSE_REVIEW.md`
 - 8 placeholder skill candidates added to registry (all `inactive`)
 - See `docs/SKILL_CANDIDATE_MATRIX.md` for Tier 1 priority candidates
+
+## Completed: MCP Gateway Scaffold ✅
+- `apps/runtime/src/mcp/types.ts` — Internal MCP types
+- `apps/runtime/src/mcp/policies.ts` — Access control, categorization, risk assessment, audit
+- `apps/runtime/src/mcp/registry.ts` — Server config registry with CRUD, 4 default servers (all disabled)
+- `apps/runtime/src/mcp/gateway.ts` — Tool discovery filtering, governed invocation, mock tool generation
+- `apps/runtime/src/mcp/mcpoClient.ts` — mcpo OpenAPI bridge placeholder
+- 8 new API endpoints on server (server CRUD + discovery + audit)
+- `docs/MCP_GATEWAY.md` and `docs/MCP_SECURITY_POLICY.md`
 
 ## Completed: Local Test Workflow ✅
 - `npm run check` runs typecheck + build + runtime:build

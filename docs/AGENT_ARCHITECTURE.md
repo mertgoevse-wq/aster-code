@@ -175,6 +175,36 @@ Aster Code's safety-first approach ensures:
 | GET | `/agent/skills` | List all registered skills |
 | PATCH | `/agent/skills/:id` | Update a skill's status or execution mode |
 
+## MCP Gateway
+
+The MCP (Model Context Protocol) Gateway provides a governed layer between the agent and external MCP servers. All tool access flows through policy checks.
+
+### Safety Invariants
+1. All MCP servers are **disabled by default**
+2. **Blocked tools** are never exposed to the agent
+3. **Allowlist mode**: if set, only listed tools are visible
+4. **Write/network/system** tools always require user approval
+5. **High-risk** servers require explicit allowlist
+6. **Every invocation** is audit-logged
+
+### Components
+- `mcp/registry.ts` — Server config CRUD, 4 default servers
+- `mcp/policies.ts` — 5-layer access control (server enablement, tool blocklist/allowlist, categorization, risk assessment, approval gates)
+- `mcp/gateway.ts` — Tool discovery filtering, governed invocation, audit logging
+- `mcp/mcpoClient.ts` — mcpo OpenAPI bridge (MVP placeholder)
+
+### API Endpoints
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/mcp/servers` | List all MCP server configs |
+| POST | `/mcp/servers` | Add a new server |
+| PATCH | `/mcp/servers/:id` | Update a server |
+| DELETE | `/mcp/servers/:id` | Remove a server |
+| POST | `/mcp/servers/:id/discover` | Discover tools from server |
+| POST | `/mcp/servers/discover-all` | Discover tools from all enabled |
+| GET | `/mcp/audit` | Retrieve audit log |
+| DELETE | `/mcp/audit` | Clear audit log |
+
 ## MVP Limitations
 
 - **In-memory sessions** — Lost on server restart

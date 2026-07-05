@@ -17,6 +17,8 @@ import { classifyTask, selectSkillsForTask, generatePlan } from './agent/planner
 import { routeAgentTasks } from './agent/agentRouter.js';
 import { executeApprovedPlan } from './agent/loop.js';
 import { skillsRegistry } from './skills/registry.js';
+import { mcpServerRegistry } from './mcp/registry.js';
+import { discoverTools, discoverAllTools, invokeTool, getAuditLog, clearAuditLog } from './mcp/gateway.js';
 
 dotenv.config();
 
@@ -475,6 +477,114 @@ app.get('/agent/session/:id/events', (req, res) => {
     const since = req.query.since as string | undefined;
     const events = sessionStore.getEvents(session.info.id, since);
     res.json({ success: true, events });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/* ==========================================================================
+   MCP GATEWAY ENDPOINTS
+   ========================================================================== */
+
+// GET /mcp/servers — List all MCP server configs
+app.get('/mcp/servers', (req, res) => {
+  try {
+    const servers = mcpServerRegistry.getAll();
+    res.json({ success: true, servers });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /mcp/servers — Add a new MCP server config
+app.post('/mcp/servers', (req, res) => {
+  try {
+    const { name, transport, command, url, riskLevel, allowedTools, blockedTools, requiresApproval } = req.body;
+    if (!name || !transport) {
+      return res.status(400).json({ success: false, error: 'Fields "name" and "transport" are required.' });
+    }
+    const server = mcpServerRegistry.add({
+      name,
+      transport,
+      command,
+      url,
+      enabled: false, // always disabled by default
+      riskLevel: riskLevel || 'medium',
+      allowedTools: allowedTools || [],
+      blockedTools: blockedTools || [],
+      requiresApproval: requiresApproval !== false,
+    });
+    res.json({ success: true, server });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// PATCH /mcp/servers/:id — Update an MCP server config
+app.patch('/mcp/servers/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    const updated = mcpServerRegistry.update(id, updates);
+    if (!updated) {
+      return res.status(404).json({ success: false, error: `MCP server "${id}" not found.` });
+    }
+    res.json({ success: true, server: updated });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// DELETE /mcp/servers/:id — Remove an MCP server config
+app.delete('/mcp/servers/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const removed = mcpServerRegistry.remove(id);
+    if (!removed) {
+      return res.status(404).json({ success: false, error: `MCP server "${id}" not found.` });
+    }
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /mcp/servers/:id/discover — Discover tools from an MCP server
+app.post('/mcp/servers/:id/discover', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await discoverTools(id);
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /mcp/servers/discover-all — Discover tools from all enabled servers
+app.post('/mcp/servers/discover-all', async (req, res) => {
+  try {
+    const results = await discoverAllTools();
+    res.json({ success: true, results });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /mcp/audit — Retrieve MCP audit log
+app.get('/mcp/audit', async (req, res) => {
+  try {
+    const log = await getAuditLog();
+    res.json({ success: true, auditLog: log });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// DELETE /mcp/audit — Clear MCP audit log
+app.delete('/mcp/audit', async (req, res) => {
+  try {
+    await clearAuditLog();
+    res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }

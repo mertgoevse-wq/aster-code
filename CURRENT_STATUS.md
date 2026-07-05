@@ -52,6 +52,13 @@ aster-code/
 6. **🆕 Local test workflow** — `npm run check` validates all builds; `docs/LOCAL_TESTING.md` with smoke test checklist
 7. **🆕 External repo research** — 29 repos analyzed, 12 cloned, 8 placeholder skill candidates added (all inactive)
 16. **🆕 Agent skill routing** — Automatic intent classification (14 categories) + skill router with confidence/risk/permissions; routing preview in Chat
+17. **🆕 MCP Gateway** — Governed MCP server registry (4 default servers, all disabled), tool discovery with policy filtering, 5-layer access control, audit logging, mcpo OpenAPI bridge placeholder
+
+### MCP Gateway API Endpoints
+1. **Server management** — `GET/POST/PATCH/DELETE /mcp/servers` for MCP server config CRUD
+2. **Tool discovery** — `POST /mcp/servers/:id/discover` and `/discover-all` for tool listing
+3. **Audit log** — `GET/DELETE /mcp/audit` for invocation audit trail
+4. **Safety invariants** — Servers disabled by default, blocked tools hidden, write/network/system require approval, high-risk requires allowlist
 
 ### Backend API (Runtime Server)
 1. **Health check** — `GET /health` returns uptime + status
@@ -93,7 +100,8 @@ aster-code/
 3. **In-memory sessions** — Lost on server restart (Phase 2)
 4. **No streaming** — Execution results returned as single response
 5. **No real LLM completion** — No `/api/chat/completions` or similar endpoint
-6. **Provider adapters** — `anthropic` adapter wraps OpenAI-Compatible adapter with placeholder URL
+6. **🆕 MCP Gateway** — Governed MCP server registry (4 default servers, all disabled), tool discovery with policy filtering, 5-layer access control, audit logging, mcpo OpenAPI bridge placeholder
+7. **No real MCP execution** — MVP: tools are mock/placeholder, invocations are simulated (Phase 2)
 
 ### Build Dependencies
 1. **2 npm vulnerabilities** (1 moderate, 1 high) — In transitive deps, run `npm audit fix` to address
@@ -122,3 +130,4 @@ aster-code/
 | 7 | Fake/stubbed functions? | ⚠️ Chat is fully simulated, no real LLM calls |
 | 8 | Secrets in frontend files? | ✅ None found |
 | 9 | UI calm ivory/Claude-like? | ✅ Warm beige palette, not cyberpunk |
+| 10 | MCP gateway scaffolded? | ✅ Registry, policies, gateway, mcpo client, API endpoints |

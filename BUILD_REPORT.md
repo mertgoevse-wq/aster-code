@@ -12,6 +12,21 @@ Status: SUCCESS — All builds pass cleanly
 4. `npm run build` — 0 errors
 5. `npm run runtime:build` — 0 errors
 
+## MCP Gateway Scaffolding
+- Created `apps/runtime/src/mcp/` module with 5 files:
+  - `types.ts` — Internal MCP types (ToolDiscoveryRequest, GatewayInvokeResult, etc.)
+  - `policies.ts` — Access control, tool categorization (5 categories), risk assessment, audit entry creation
+  - `registry.ts` — MCP server registry with 4 default servers (all disabled), CRUD operations
+  - `gateway.ts` — Tool discovery with filtering (blocked/allowlist), governed invocation, audit logging, mock tool generation
+  - `mcpoClient.ts` — mcpo-style OpenAPI bridge placeholder
+- 4 default MCP server configs: Filesystem (stdio), GitHub (http), Postman API (mcpo-openapi), Memory (stdio)
+- All servers disabled by default; blocked tools hidden; write/network/system always require approval
+- 8 new API endpoints: GET/POST/PATCH/DELETE /mcp/servers, POST discover/discover-all, GET/DELETE audit log
+- `docs/MCP_GATEWAY.md` — full architecture docs with safety invariants, tool flow, API reference
+- `docs/MCP_SECURITY_POLICY.md` — 5-layer access control, permission levels, configurable settings
+- Audit log: in-memory, records every invocation (success/error/blocked/pending-approval)
+- MVP: no real MCP tool discovery (mock tools), no real tool execution (simulated)
+
 ## Automatic Agent Skill Routing
 - Added 14 intent categories: explain-code, build-feature, fix-bug, debug-build, improve-ui, dependency-task, write-tests, create-docs, refactor, setup-runtime, model-provider-task, mcp-tool-task, git-task, unknown
 - `intentClassifier.ts`: rule-based keyword matching classifier
@@ -124,6 +139,13 @@ Status: SUCCESS — All builds pass cleanly
 - `docs/SECURITY.md` — Added agent loop safety invariants and skill-level permission mapping
 
 ## Verification Results
+- ✅ All 3 workspaces typecheck with 0 errors
+- ✅ All 3 workspaces build successfully (shared rebuilt for MCP type exports)
+- ✅ MCP server CRUD endpoints functional
+- ✅ Policy checks enforce: disabled-by-default, blocked-tools-hidden, write/network/system-require-approval
+- ✅ Audit entries created for all invocation code paths
+
+## Previous Verification Results (from prior runs)
 - ✅ All 3 workspaces typecheck with 0 errors
 - ✅ All 3 workspaces build successfully
 - ✅ Agent approval flow guards correctly placed
