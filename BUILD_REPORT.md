@@ -1,11 +1,26 @@
-# Aster Code v0.1.0 First-Run Onboarding Build Report
+# Aster Code v0.1.0 Security Audit Build Report
 
 Date: 2026-07-05
 Status: SUCCESS — All builds + smoke tests pass
 
 ## Changes Made
 
-### 1. Smoke Test Infrastructure (4 new scripts)
+### 1. Security Audit (`docs/SECURITY_AUDIT_REPORT.md`)
+- Comprehensive secret pattern search: `ghp_`, `sk-`, `OPENAI_API_KEY`, `client_secret`, etc. — none found
+- Frontend audit: no hardcoded keys, localStorage scrubs API keys before writing
+- Electron audit: `contextIsolation: true`, `nodeIntegration: false`, minimal preload IPC
+- MCP audit: all servers disabled, approval gating, audit logging
+- `.gitignore` audit: added `.env.*` pattern, added `apps/runtime/workspaces/`
+- `sandbox` evaluated: kept `false` (would break preload; `contextIsolation` provides isolation)
+
+### 2. Security Fixes
+- `.gitignore`: Added `.env.*` to catch `.env.production`, `.env.development`, etc.
+- `.gitignore`: Added `apps/runtime/workspaces/` exclusion
+- `window.ts`: Evaluated `sandbox: true`, reverted to `false` (preload needs `process.env`)
+
+---
+
+### Prior Changes (from earlier commits)
 - `scripts/test-runtime-health.mjs` — Calls `GET /health`, `/api/agent/skills`, `/api/models`. Gracefully skips when offline (exit 0).
 - `scripts/test-web-build.mjs` — Checks `index.html`, CSS, JS assets; dist not empty; source map check; CSS size check. 6 checks. Node 18+ compatible.
 - `scripts/test-desktop-package.mjs` — Checks main/preload/window.js; dist-electron; NSIS installer; unpacked EXE; .env leak scan; web resources. 7 categories.
