@@ -9,6 +9,14 @@ import SkillsScreen from './screens/SkillsScreen.tsx';
 import SettingsScreen from './screens/SettingsScreen.tsx';
 import { ModelMetadata, ProviderInfo, ProviderConfigs } from '@aster-code/shared';
 
+interface CacheStatus {
+  isRefreshing: boolean;
+  lastCheckedAt: string | null;
+  cacheTTLMs: number;
+  cacheSize: number;
+  providerStatus: Record<string, { status: string; latencyMs?: number }>;
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('chat');
   const [runtimeConnected, setRuntimeConnected] = useState(false);
@@ -18,6 +26,18 @@ export default function App() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState<string | null>(null);
 
+  // Auto-refresh config
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(() => {
+    return localStorage.getItem('aster_auto_refresh') !== 'false';
+  });
+  const [autoRefreshIntervalS, setAutoRefreshIntervalS] = useState(() => {
+    const saved = localStorage.getItem('aster_auto_refresh_interval');
+    return saved ? parseInt(saved, 10) : 300;
+  });
+
+  // Cache status
+  const [cacheStatus, setCacheStatus] = useState<CacheStatus | null>(null);
+
   // Check backend server connection
   const checkHealth = async () => {
     try {
@@ -26,9 +46,7 @@ export default function App() {
         setRuntimeConnected(true);
         return true;
       }
-    } catch (e) {
-      // offline
-    }
+    } catch { /* offline */ }
     setRuntimeConnected(false);
     return false;
   };
@@ -47,19 +65,33 @@ export default function App() {
         if (mData.success) {
           setModels(mData.models);
           setLastRefreshTime(mData.lastRefreshAt);
-          // Set default selected model
           if (mData.models.length > 0 && !selectedModelId) {
             setSelectedModelId(mData.models[0].id);
           }
         }
-
-        if (pData.success) {
-          setProviders(pData.providers);
-        }
+        if (pData.success) setProviders(pData.providers);
       }
     } catch (err) {
       console.error('Failed to load model registry endpoints:', err);
     }
+  };
+
+  const fetchCacheStatus = async () => {
+    try {
+      const res = await fetch('/api/models/status');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.status) {
+          setCacheStatus({
+            isRefreshing: data.status.isRefreshing,
+            lastCheckedAt: data.status.lastCheckedAt,
+            cacheTTLMs: data.status.cacheTTLMs,
+            cacheSize: data.status.cacheSize,
+            providerStatus: data.status.providerStatus || {}
+          });
+        }
+      }
+    } catch { /* non-critical */ }
   };
 
   const handleRefreshModels = async () => {
@@ -77,6 +109,7 @@ export default function App() {
           }
         }
       }
+      await fetchCacheStatus();
     } catch (e) {
       console.error('Model refresh request failed:', e);
     } finally {
@@ -94,7 +127,6 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
-          // Re-load models list and provider configurables
           await fetchRegistryData();
           return true;
         }
@@ -105,26 +137,46 @@ export default function App() {
     return false;
   };
 
+  const handleAutoRefreshToggle = (enabled: boolean) => {
+    setAutoRefreshEnabled(enabled);
+    localStorage.setItem('aster_auto_refresh', String(enabled));
+  };
+
+  const handleAutoRefreshInterval = (seconds: number) => {
+    setAutoRefreshIntervalS(seconds);
+    localStorage.setItem('aster_auto_refresh_interval', String(seconds));
+  };
+
   // Monitor connection states
   useEffect(() => {
     const init = async () => {
       const connected = await checkHealth();
       if (connected) {
         await fetchRegistryData();
+        await fetchCacheStatus();
       }
     };
     init();
 
-    // Check health every 8 seconds
     const interval = setInterval(async () => {
       const connected = await checkHealth();
-      if (connected && models.length === 0) {
-        await fetchRegistryData();
+      if (connected) {
+        if (models.length === 0) await fetchRegistryData();
+        await fetchCacheStatus();
       }
     }, 8000);
 
     return () => clearInterval(interval);
   }, [models.length]);
+
+  // Auto-refresh timer
+  useEffect(() => {
+    if (!autoRefreshEnabled || !runtimeConnected) return;
+    const timer = setInterval(() => {
+      handleRefreshModels();
+    }, autoRefreshIntervalS * 1000);
+    return () => clearInterval(timer);
+  }, [autoRefreshEnabled, autoRefreshIntervalS, runtimeConnected]);
 
   const renderActiveScreen = () => {
     switch (activeTab) {
@@ -176,11 +228,18 @@ export default function App() {
         <TopBar
           title={getTabTitle()}
           models={models}
+          providers={providers}
           selectedModelId={selectedModelId}
           setSelectedModelId={setSelectedModelId}
           runtimeConnected={runtimeConnected}
           onRefreshModels={handleRefreshModels}
           isRefreshing={isRefreshing}
+          lastRefreshTime={lastRefreshTime}
+          cacheStatus={cacheStatus}
+          autoRefreshEnabled={autoRefreshEnabled}
+          autoRefreshIntervalS={autoRefreshIntervalS}
+          onAutoRefreshToggle={handleAutoRefreshToggle}
+          onAutoRefreshInterval={handleAutoRefreshInterval}
         />
       }
     >

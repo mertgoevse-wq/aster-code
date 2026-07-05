@@ -29,6 +29,15 @@ Status: SUCCESS — All builds pass cleanly
 - ChatScreen: polls for prompt changes via `visibilitychange` + `storage` events
 - Shared localStorage helpers exported from SettingsScreen, imported by ChatScreen
 
+## Model Picker UX Enhancement
+- TopBar: provider filter dropdown + model dropdown (filtered by provider)
+- TopBar: model detail popover card with all specs (context, output, streaming, tools, vision, best for, description, last checked)
+- TopBar: refresh button, cache status timestamp, auto-refresh toggle with interval menu (1m/3m/5m/10m/30m)
+- App.tsx: auto-refresh timer that periodically calls handleRefreshModels when enabled
+- App.tsx: cache status fetched from GET /api/models/status every 8s
+- Provider filter change auto-selects first available model from filtered list
+- Loading/error/empty states: "Loading models..." while refreshing, "No models available" when empty
+
 ## Agent Loop MVP — What Was Built
 
 ### Runtime Backend

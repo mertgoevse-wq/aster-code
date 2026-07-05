@@ -77,6 +77,7 @@ aster-code/
 11. **🆕 AgentPlanPanel** — Expandable step list, permission badges, approve/reject buttons
 12. **🆕 System Prompt Library** — Full CRUD with tags, duplicate, export/import JSON, localStorage persistence
 13. **🆕 Chat prompt badge** — Active prompt displayed in chat, syncs across tabs
+14. **🆕 Model Picker UX** — Provider + model dropdowns in TopBar, detail popover with all specs, auto-refresh timer (configurable interval), cache status
 
 ---
 
