@@ -114,15 +114,46 @@ This runs `runtime:dev` and `dev:web` concurrently in one terminal. Configure yo
 
 ## All Available Scripts
 
+### Build & Check
+
 | Command | Description |
 |---------|-------------|
-| `npm run check` | Full validation: typecheck + build + runtime:build |
+| `npm run check` | Full validation: typecheck + build + runtime:build + desktop:build |
 | `npm run typecheck` | TypeScript type checking (all workspaces) |
 | `npm run build` | Production build (all workspaces) |
 | `npm run runtime:build` | Runtime server compilation only |
+| `npm run app:build` | Full production build + typecheck |
+| `npm run desktop:dist` | Build web + runtime + package NSIS installer |
+| `npm run release:local` | Full release pipeline: check → app:build → dist → smoke → test |
+
+### Dev Server
+
+| Command | Description |
+|---------|-------------|
 | `npm run runtime:dev` | Start runtime server with hot reload |
 | `npm run dev:web` | Start web frontend dev server |
 | `npm run dev` | Start both runtime + web concurrently |
+| `npm run app:dev` | Start runtime + web + desktop concurrently |
+
+### Automated Smoke Tests
+
+| Command | Description |
+|---------|-------------|
+| `npm run test:runtime` | Check runtime health endpoint + API endpoints |
+| `npm run test:build` | Verify web build artifacts (HTML, CSS, JS) |
+| `npm run test:desktop` | Verify desktop packaging (dist, installer, .env scan) |
+| `npm run test:smoke` | Run ALL smoke tests + repo hygiene checks |
+
+Run the full smoke suite anytime:
+```powershell
+npm run test:smoke
+```
+
+This runs 4 test suites:
+- **Runtime Health** — `/health`, `/api/agent/skills`, `/api/models` (skipped if offline)
+- **Web Build** — `index.html`, CSS, JS, dist size, source maps
+- **Desktop Package** — `main.js`, installer, unpacked EXE, .env leak scan
+- **Repo Hygiene** — `.gitignore` coverage, valid `package.json`, AGENTS.md exists
 
 ---
 

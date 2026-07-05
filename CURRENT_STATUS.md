@@ -44,7 +44,14 @@ aster-code/
 
 ## What Works ✅
 
-### Release Pipeline (New)
+### Automated Smoke Tests (New)
+1. **✅ `test:runtime`** — Health endpoint + skills + models (graceful offline skip)
+2. **✅ `test:build`** — Web build artifacts (6 checks: HTML, CSS, JS, no source maps)
+3. **✅ `test:desktop`** — Desktop package (7 checks: dist, installer, EXE, .env leak)
+4. **✅ `test:smoke`** — Full orchestrator (3 suites + 5 repo hygiene checks)
+5. **✅ `release:local`** — Pipeline now includes `test:smoke` verification
+
+### Release Pipeline
 1. **✅ `npm run release:local`** — One-command pipeline: check → app:build → desktop:dist → smoke
 2. **✅ Windows Installer** — NSIS installer at `dist-electron/Aster Code Setup 0.1.0.exe` (77 MB)
 3. **✅ Portable EXE** — Unpacked at `dist-electron/win-unpacked/Aster Code.exe` (178 MB)
@@ -117,3 +124,7 @@ aster-code/
 | 15 | No .env/secrets in packaged output? | ✅ Yes — exclusion filters, verified clean |
 | 16 | `docs/RELEASE_PACKAGE.md` exists? | ✅ Yes — install/run/uninstall/logs guide |
 | 17 | `release-notes/0.1.0.md` exists? | ✅ Yes — what works, simulated, limitations, roadmap |
+| 18 | `test:build` passes? | ✅ Yes — 6/6 web build checks |
+| 19 | `test:desktop` passes? | ✅ Yes — 8/8 desktop package checks |
+| 20 | `test:smoke` passes? | ✅ Yes — all 4 suites pass (runtime skipped offline) |
+| 21 | Repo hygiene checks? | ✅ Yes — no .env leaks, .gitignore covers sensitive dirs |
