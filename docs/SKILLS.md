@@ -2,6 +2,10 @@
 
 Aster Code features a robust agent skills configuration system. Every action an agent performs is constrained by a "skill configuration" checking sandbox scopes, security logs, and user confirmation.
 
+## Backend Skills Registry
+
+The skills registry lives in `apps/runtime/src/skills/registry.ts` and serves as the single source of truth for all skill definitions. The frontend fetches from `GET /api/agent/skills` and updates via `PATCH /api/agent/skills/:id`.
+
 ## Design Philosophy
 
 Agents should not run arbitrary workspace modifications without visible validation. The skills schema requires:
@@ -24,7 +28,24 @@ The runtime enforces the following permission parameters:
 2. **Requires Approval (`ask`)**:
    - The studio blocks execution and presents the user with a prompt card detailing the exact command or file edit request. The agent cannot proceed until the user clicks "Approve".
 
-## Built-in MVP Skills
+## Skill Selection in Agent Loop
+
+When a user submits a task, the planner (
+`apps/runtime/src/agent/planner.ts`) automatically selects relevant skills:
+
+| Task Type | Recommended Skills |
+|-----------|-------------------|
+| explain | codebase-auditor |
+| plan | project-planner, codebase-auditor |
+| edit-code | project-planner, codebase-auditor |
+| debug-build | build-fixer, codebase-auditor, dependency-checker |
+| ui-fix | ui-debugger |
+| dependency-fix | dependency-checker, build-fixer |
+| docs | readme-writer, codebase-auditor |
+
+Only active skills are selected. Users can toggle skills on/off in the Skills screen.
+
+## Built-in Skills
 
 - **Project Planner**: Generates lists and step guides before execution (`auto`).
 - **Codebase Auditor**: Scans project files and folders for structural feedback (`auto`).

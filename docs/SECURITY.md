@@ -22,3 +22,26 @@ Security is built into Aster Code from day one. Since agent studios execute code
 ### 4. Sandbox Permissions Approval Loop
 - High-risk operations (e.g. executing commands or writing files) default to `Requires Approval` (`ask`) mode.
 - Users can review the target files and exact bash command inputs in the UI before approving.
+
+### 5. Agent Loop Safety Invariants
+
+The agent loop (`apps/runtime/src/agent/loop.ts`) enforces:
+
+- **No autonomous execution**: All plan steps must be explicitly approved via the `/agent/session/:id/approve` endpoint.
+- **Permission hierarchy**: Five permission tiers (`read-only` → `dangerous-disabled`) are checked before every action.
+- **Permanently blocked actions**: `dangerous-disabled` permission level actions are ALWAYS blocked, regardless of user approval.
+- **Deterministic plans**: MVP uses rule-based classification and mock plans — no real LLM calls.
+- **Simulated execution**: File writes and shell commands are logged as events but NOT actually executed in MVP.
+- **In-memory sessions**: No data persists to disk, preventing stale or leaked session data.
+
+### 6. Skill-Level Permission Mapping
+
+Each skill maps to a permission level based on its required scopes:
+
+| Skill Permissions | Effective Permission Level |
+|------------------|---------------------------|
+| `read_workspace` only | `read-only` or `suggest-edits` |
+| + `write_workspace` | `apply-edits-after-approval` |
+| + `execute_commands` | `run-safe-commands-after-approval` |
+
+Skills with `executionMode: 'ask'` require additional explicit approval before running, even at low permission levels.

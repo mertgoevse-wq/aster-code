@@ -12,6 +12,10 @@ import {
 } from './workspace.js';
 import { runner } from './commands.js';
 import { addClient, removeClient } from './events.js';
+import { sessionStore } from './agent/sessionStore.js';
+import { classifyTask, selectSkillsForTask, generatePlan } from './agent/planner.js';
+import { executeApprovedPlan } from './agent/loop.js';
+import { skillsRegistry } from './skills/registry.js';
 
 dotenv.config();
 
@@ -254,6 +258,222 @@ app.post('/commands/stop', async (req, res) => {
 /* ==========================================================================
    SERVER-SENT EVENTS (SSE) ENDPOINT
    ========================================================================== */
+
+/* ==========================================================================
+   AGENT LOOP API ENDPOINTS
+   ========================================================================== */
+
+// GET /agent/skills — List all registered skills
+app.get('/agent/skills', (req, res) => {
+  try {
+    const skills = skillsRegistry.getAllSkills();
+    res.json({ success: true, skills });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// PATCH /agent/skills/:id — Update a skill's status or execution mode
+app.patch('/agent/skills/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, executionMode } = req.body;
+    const updated = skillsRegistry.updateSkill(id, { status, executionMode });
+    if (!updated) {
+      return res.status(404).json({ success: false, error: `Skill "${id}" not found.` });
+    }
+    res.json({ success: true, skill: updated });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /agent/session — Create a new agent session
+app.post('/agent/session', (req, res) => {
+  try {
+    const { task } = req.body;
+    if (!task || typeof task !== 'string' || !task.trim()) {
+      return res.status(400).json({ success: false, error: 'Body field "task" (non-empty string) is required.' });
+    }
+
+    const session = sessionStore.createSession(task.trim());
+    res.json({ success: true, session });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /agent/session/:id — Retrieve session info with plan and events
+app.get('/agent/session/:id', (req, res) => {
+  try {
+    const session = sessionStore.getSession(req.params.id);
+    if (!session) {
+      return res.status(404).json({ success: false, error: `Session "${req.params.id}" not found.` });
+    }
+    res.json({
+      success: true,
+      info: session.info,
+      plan: session.plan,
+      events: session.events
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /agent/session/:id/plan — Classify task and generate execution plan
+app.post('/agent/session/:id/plan', (req, res) => {
+  try {
+    const session = sessionStore.getSession(req.params.id);
+    if (!session) {
+      return res.status(404).json({ success: false, error: `Session "${req.params.id}" not found.` });
+    }
+
+    if (session.info.status === 'executing') {
+      return res.status(409).json({ success: false, error: 'Session is already executing.' });
+    }
+
+    // 1. Classify task
+    const classification = classifyTask(session.info.taskDescription);
+
+    // 2. Select skills
+    const activeSkills = skillsRegistry.getActiveSkills();
+    const selectedSkillIds = selectSkillsForTask(classification.taskType, activeSkills);
+
+    // 3. Update session with task type
+    sessionStore.updateSession(session.info.id, {
+      taskType: classification.taskType,
+      status: 'planning'
+    });
+
+    // 4. Generate plan
+    const plan = generatePlan(
+      session.info.id,
+      session.info.taskDescription,
+      classification.taskType,
+      selectedSkillIds
+    );
+
+    // 5. Store plan
+    sessionStore.setPlan(session.info.id, plan);
+
+    // 6. Emit plan-created event
+    sessionStore.addEvent(session.info.id, {
+      id: `evt-${Date.now()}`,
+      sessionId: session.info.id,
+      type: 'plan-created',
+      title: 'Plan generated',
+      message: `Task classified as "${classification.taskType}" with ${plan.steps.length} steps.`,
+      status: 'done',
+      timestamp: new Date().toISOString()
+    });
+
+    const updatedSession = sessionStore.getSession(session.info.id)!;
+    res.json({
+      success: true,
+      classification,
+      plan,
+      selectedSkills: selectedSkillIds
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /agent/session/:id/approve — Approve and execute the plan
+app.post('/agent/session/:id/approve', async (req, res) => {
+  try {
+    const session = sessionStore.getSession(req.params.id);
+    if (!session) {
+      return res.status(404).json({ success: false, error: `Session "${req.params.id}" not found.` });
+    }
+
+    if (!session.plan) {
+      return res.status(400).json({ success: false, error: 'No plan found for this session. Generate a plan first.' });
+    }
+
+    if (session.plan.status !== 'pending-approval') {
+      return res.status(409).json({
+        success: false,
+        error: `Plan is in "${session.plan.status}" state. Only "pending-approval" plans can be approved.`
+      });
+    }
+
+    // Mark plan as approved
+    session.plan.status = 'approved';
+    session.plan.updatedAt = new Date().toISOString();
+    sessionStore.updateSession(session.info.id, { status: 'executing' });
+
+    sessionStore.addEvent(session.info.id, {
+      id: `evt-${Date.now()}`,
+      sessionId: session.info.id,
+      type: 'approval-required',
+      title: 'Plan approved',
+      message: 'User approved the plan. Starting execution...',
+      status: 'done',
+      timestamp: new Date().toISOString()
+    });
+
+    // Execute plan (MVP: simulated steps only)
+    const events = await executeApprovedPlan(session.info.id, session.plan);
+
+    res.json({
+      success: true,
+      plan: session.plan,
+      events
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /agent/session/:id/reject — Reject the plan
+app.post('/agent/session/:id/reject', (req, res) => {
+  try {
+    const session = sessionStore.getSession(req.params.id);
+    if (!session) {
+      return res.status(404).json({ success: false, error: `Session "${req.params.id}" not found.` });
+    }
+
+    if (!session.plan) {
+      return res.status(400).json({ success: false, error: 'No plan found for this session.' });
+    }
+
+    session.plan.status = 'rejected';
+    session.plan.updatedAt = new Date().toISOString();
+    sessionStore.updateSession(session.info.id, { status: 'rejected' });
+
+    sessionStore.addEvent(session.info.id, {
+      id: `evt-${Date.now()}`,
+      sessionId: session.info.id,
+      type: 'step-blocked',
+      title: 'Plan rejected',
+      message: 'User rejected the plan. No actions were taken.',
+      status: 'blocked',
+      timestamp: new Date().toISOString()
+    });
+
+    res.json({ success: true, plan: session.plan });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /agent/session/:id/events — Get events for a session
+app.get('/agent/session/:id/events', (req, res) => {
+  try {
+    const session = sessionStore.getSession(req.params.id);
+    if (!session) {
+      return res.status(404).json({ success: false, error: `Session "${req.params.id}" not found.` });
+    }
+
+    const since = req.query.since as string | undefined;
+    const events = sessionStore.getEvents(session.info.id, since);
+    res.json({ success: true, events });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 // GET /events
 app.get('/events', (req, res) => {

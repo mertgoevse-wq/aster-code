@@ -1,96 +1,126 @@
-import { useState } from 'react';
-import { Award, Shield, Lock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Award, Shield, Lock, RefreshCw, AlertTriangle } from 'lucide-react';
 import { SkillDefinition } from '@aster-code/shared';
 
 export default function SkillsScreen() {
-  const [skills, setSkills] = useState<SkillDefinition[]>([
-    {
-      id: 'project-planner',
-      name: 'Project Planner',
-      description: 'Generates structural design plans, checklists, and dependency graphs before writing code.',
-      permissions: ['read_workspace', 'write_workspace'],
-      executionMode: 'auto',
-      status: 'active',
-    },
-    {
-      id: 'codebase-auditor',
-      name: 'Codebase Auditor',
-      description: 'Reviews file structure, scans for logical bugs, and searches for dead imports.',
-      permissions: ['read_workspace'],
-      executionMode: 'auto',
-      status: 'active',
-    },
-    {
-      id: 'ui-debugger',
-      name: 'UI Debugger',
-      description: 'Analyzes visual layouts, detects alignment bugs, and suggests styling adjustments.',
-      permissions: ['read_workspace', 'write_workspace'],
-      executionMode: 'ask',
-      status: 'active',
-    },
-    {
-      id: 'dependency-checker',
-      name: 'Dependency Checker',
-      description: 'Reviews package registry mappings, runs security vulnerability audits, and flags deprecated libs.',
-      permissions: ['read_workspace', 'execute_commands'],
-      executionMode: 'ask',
-      status: 'active',
-    },
-    {
-      id: 'build-fixer',
-      name: 'Build Fixer',
-      description: 'Reads TypeScript compiler compiler errors and repairs modules automatically.',
-      permissions: ['read_workspace', 'write_workspace', 'execute_commands'],
-      executionMode: 'ask',
-      status: 'active',
-    },
-    {
-      id: 'test-writer',
-      name: 'Test Writer',
-      description: 'Scans files to output unit and integration test coverage files in test folders.',
-      permissions: ['read_workspace', 'write_workspace'],
-      executionMode: 'auto',
-      status: 'active',
-    },
-    {
-      id: 'readme-writer',
-      name: 'README Writer',
-      description: 'Synthesizes code files to write comprehensive documentation and setup guidelines.',
-      permissions: ['read_workspace', 'write_workspace'],
-      executionMode: 'auto',
-      status: 'active',
-    },
-    {
-      id: 'android-apk-helper',
-      name: 'Android APK Helper',
-      description: 'Diagnoses SDK environment variables and triggers Gradle build tasks securely.',
-      permissions: ['read_workspace', 'execute_commands'],
-      executionMode: 'ask',
-      status: 'active',
-    }
-  ]);
+  const [skills, setSkills] = useState<SkillDefinition[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const toggleExecutionMode = (id: string) => {
-    setSkills(prev =>
-      prev.map(s => (s.id === id ? { ...s, executionMode: s.executionMode === 'auto' ? 'ask' : 'auto' } : s))
-    );
+  // Fetch skills from backend runtime
+  const fetchSkills = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/agent/skills');
+      if (!res.ok) {
+        throw new Error(`Failed to load skills: ${res.status}`);
+      }
+      const data = await res.json();
+      if (data.success) {
+        setSkills(data.skills);
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch skills from runtime:', err);
+      setError(err.message || 'Could not connect to runtime server.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const toggleStatus = (id: string) => {
+  useEffect(() => {
+    fetchSkills();
+  }, []);
+
+  const toggleExecutionMode = async (id: string) => {
+    const skill = skills.find(s => s.id === id);
+    if (!skill) return;
+
+    const newMode = skill.executionMode === 'auto' ? 'ask' : 'auto';
+
+    // Optimistic update
     setSkills(prev =>
-      prev.map(s => (s.id === id ? { ...s, status: s.status === 'active' ? 'inactive' : 'active' } : s))
+      prev.map(s => (s.id === id ? { ...s, executionMode: newMode } : s))
     );
+
+    // Sync with backend
+    try {
+      await fetch(`/api/agent/skills/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ executionMode: newMode }),
+      });
+    } catch (err) {
+      console.error(`Failed to update skill ${id}:`, err);
+    }
+  };
+
+  const toggleStatus = async (id: string) => {
+    const skill = skills.find(s => s.id === id);
+    if (!skill) return;
+
+    const newStatus = skill.status === 'active' ? 'inactive' as const : 'active' as const;
+
+    // Optimistic update
+    setSkills(prev =>
+      prev.map(s => (s.id === id ? { ...s, status: newStatus } : s))
+    );
+
+    // Sync with backend
+    try {
+      await fetch(`/api/agent/skills/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+    } catch (err) {
+      console.error(`Failed to update skill ${id}:`, err);
+    }
   };
 
   return (
     <div className="h-full w-full bg-ivory-50 overflow-y-auto p-8 flex flex-col gap-8">
       {/* Header */}
       <div className="border-b border-ivory-200 pb-6">
-        <h1 className="font-serif text-3xl font-bold text-ivory-900 leading-tight">Agent Skills</h1>
-        <p className="text-sm text-ivory-500 mt-1">
-          Review and audit specific tool skills that Aster agents can run. Adjust confirmation flags to restrict background execution.
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="font-serif text-3xl font-bold text-ivory-900 leading-tight">Agent Skills</h1>
+            <p className="text-sm text-ivory-500 mt-1">
+              Review and audit specific tool skills that Aster agents can run. Adjust confirmation flags to restrict background execution.
+            </p>
+          </div>
+          <button
+            onClick={fetchSkills}
+            disabled={loading}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-ivory-200 bg-white text-ivory-600 text-xs font-medium hover:bg-ivory-50 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
       </div>
+
+      {/* Loading state */}
+      {loading && skills.length === 0 && (
+        <div className="flex-1 flex items-center justify-center py-20">
+          <div className="text-center">
+            <RefreshCw className="w-8 h-8 text-clay animate-spin mx-auto mb-3" />
+            <p className="text-sm text-ivory-500">Loading skills from runtime server...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Error state */}
+      {error && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Could not load skills from runtime</p>
+            <p className="text-xs text-amber-600 mt-0.5">{error}</p>
+            <p className="text-xs text-amber-500 mt-1">Using built-in skill definitions as fallback. Start the runtime server for live skill management.</p>
+          </div>
+        </div>
+      )}
 
       {/* Grid of Skill Cards */}
       <div className="grid grid-cols-2 gap-6">

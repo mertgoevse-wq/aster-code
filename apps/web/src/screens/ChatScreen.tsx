@@ -1,35 +1,41 @@
-import { useState } from 'react';
-import { Send, Terminal, Play, CheckCircle, FileCode, Sparkles, MessageSquare, AlertTriangle } from 'lucide-react';
-import { ChatMessage, AgentActivityStep } from '@aster-code/shared';
+import { useState, useRef, useEffect } from 'react';
+import { Send } from 'lucide-react';
+import { ChatMessage, AgentEvent, AgentPlan, AgentSessionInfo, AgentTaskType } from '@aster-code/shared';
+import AgentActivityFeed from '../components/AgentActivityFeed.tsx';
+import AgentPlanPanel from '../components/AgentPlanPanel.tsx';
 
 interface ChatScreenProps {
   selectedModelId: string;
   runtimeConnected: boolean;
 }
 
-export default function ChatScreen({ selectedModelId, runtimeConnected }: ChatScreenProps) {
+export default function ChatScreen({ selectedModelId: _selectedModelId, runtimeConnected }: ChatScreenProps) {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
       role: 'assistant',
-      content: 'Hello! I am your Aster agent. How can I help you build, test, or design today?',
+      content: 'Hello! I am your Aster agent. I operate under a strict approval-gated loop — I will plan before acting, and you must approve edits or commands before they execute. How can I help you today?',
       timestamp: new Date(Date.now() - 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     }
   ]);
-  const [activity, setActivity] = useState<AgentActivityStep[]>([
-    {
-      id: 'step-1',
-      timestamp: new Date(Date.now() - 58000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-      type: 'success',
-      title: 'Workspace Loaded',
-      message: 'Workspace c:/Users/mertg/aster-code verified successfully.',
-    }
-  ]);
+  const [events, setEvents] = useState<AgentEvent[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleSend = () => {
-    if (!input.trim() || isProcessing) return;
+  // Agent session state
+  const [session, setSession] = useState<AgentSessionInfo | null>(null);
+  const [plan, setPlan] = useState<AgentPlan | null>(null);
+  const [taskType, setTaskType] = useState<AgentTaskType | null>(null);
+  const [phase, setPhase] = useState<'idle' | 'classifying' | 'plan-review' | 'executing' | 'done'>('idle');
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const handleSend = async () => {
+    if (!input.trim() || isProcessing || !runtimeConnected) return;
 
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -39,72 +45,179 @@ export default function ChatScreen({ selectedModelId, runtimeConnected }: ChatSc
     };
 
     setMessages(prev => [...prev, userMsg]);
+    const taskText = input.trim();
     setInput('');
     setIsProcessing(true);
+    setEvents([]);
+    setPlan(null);
+    setTaskType(null);
 
-    // Simulate Agent Steps timeline
-    const mockSteps: Array<Omit<AgentActivityStep, 'id' | 'timestamp'>> = [
-      {
-        type: 'thought',
-        title: 'Analyzing workspace',
-        message: 'Searching project index files for components matching request.',
-      },
-      {
-        type: 'tool_call',
-        title: 'Reading directory',
-        message: 'mcp::list_dir(Cwd: "/workspace")',
-      },
-      {
-        type: 'tool_call',
-        title: 'Running test checker',
-        message: 'bash::run_command("npm run typecheck")',
-      },
-      {
-        type: 'success',
-        title: 'Checks complete',
-        message: 'Compilation verified with zero errors.',
+    try {
+      // Phase 1: Create session
+      setPhase('classifying');
+
+      const sessionRes = await fetch('/api/agent/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task: taskText }),
+      });
+
+      if (!sessionRes.ok) {
+        throw new Error(`Session creation failed: ${sessionRes.status}`);
       }
-    ];
 
-    let currentStep = 0;
-    const runSimulation = () => {
-      if (currentStep < mockSteps.length) {
-        const step = mockSteps[currentStep];
-        setActivity(prev => [
-          ...prev,
-          {
-            ...step,
-            id: `step-${Date.now()}-${currentStep}`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-          }
-        ]);
-        currentStep++;
-        setTimeout(runSimulation, 1000);
-      } else {
-        // Append response
-        setMessages(prev => [
-          ...prev,
-          {
-            id: `assistant-${Date.now()}`,
-            role: 'assistant',
-            content: `I have analyzed your request. As the runtime server integration is currently in dry-run mode (MVP 0.1), I have checked the system configurations and everything looks set to build. Let me know when you'd like to integrate real LLM adapters!`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            modelUsed: selectedModelId
-          }
-        ]);
-        setIsProcessing(false);
+      const sessionData = await sessionRes.json();
+      const newSession: AgentSessionInfo = sessionData.session;
+      setSession(newSession);
+
+      // Add planning message
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `assistant-planning-${Date.now()}`,
+          role: 'assistant',
+          content: `📋 Created session \`${newSession.id}\`. Analyzing your task and generating a safe execution plan...`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        }
+      ]);
+
+      // Phase 2: Generate plan
+      const planRes = await fetch(`/api/agent/session/${newSession.id}/plan`, {
+        method: 'POST',
+      });
+
+      if (!planRes.ok) {
+        throw new Error(`Plan generation failed: ${planRes.status}`);
       }
-    };
 
-    setTimeout(runSimulation, 500);
+      const planData = await planRes.json();
+      const generatedPlan: AgentPlan = planData.plan;
+      const classification = planData.classification;
+      const selectedSkills: string[] = planData.selectedSkills;
+
+      setPlan(generatedPlan);
+      setTaskType(classification.taskType);
+      setPhase('plan-review');
+
+      // Show the plan in chat
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `assistant-plan-${Date.now()}`,
+          role: 'assistant',
+          content: `✅ I've classified your task as **${classification.taskType}** and created an execution plan with ${generatedPlan.steps.length} steps. Selected skills: ${selectedSkills.join(', ')}.\n\n**Please review the plan in the panel below and approve or reject it.**`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        }
+      ]);
+
+    } catch (err: any) {
+      console.error('Agent session error:', err);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `assistant-error-${Date.now()}`,
+          role: 'assistant',
+          content: `❌ Error: ${err.message || 'Failed to process your request. Is the runtime server running on port 3001?'}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        }
+      ]);
+      setPhase('idle');
+      setIsProcessing(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!session || !plan) return;
+
+    setIsProcessing(true);
+    setPhase('executing');
+
+    setMessages(prev => [
+      ...prev,
+      {
+        id: `assistant-executing-${Date.now()}`,
+        role: 'assistant',
+        content: '⚡ Plan approved! Executing steps sequentially (MVP: simulated execution — no real file edits or commands).',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }
+    ]);
+
+    try {
+      const approveRes = await fetch(`/api/agent/session/${session.id}/approve`, {
+        method: 'POST',
+      });
+
+      if (!approveRes.ok) {
+        const errData = await approveRes.json().catch(() => ({}));
+        throw new Error((errData as any).error || `Approval failed: ${approveRes.status}`);
+      }
+
+      const approveData = await approveRes.json();
+      const execEvents: AgentEvent[] = approveData.events;
+      setEvents(execEvents);
+      setPlan(approveData.plan);
+      setPhase('done');
+      setIsProcessing(false);
+
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `assistant-done-${Date.now()}`,
+          role: 'assistant',
+          content: `✅ Execution complete! ${execEvents.filter((e: AgentEvent) => e.status === 'done').length} steps completed successfully. Check the activity feed for details.\n\n⚠️ **Note:** This is the MVP safe agent loop. File writes and shell commands are simulated — no real files were modified.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        }
+      ]);
+
+    } catch (err: any) {
+      console.error('Execution error:', err);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `assistant-error-${Date.now()}`,
+          role: 'assistant',
+          content: `❌ Execution error: ${err.message || 'Unknown error during execution.'}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        }
+      ]);
+      setPhase('idle');
+      setIsProcessing(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!session) return;
+
+    setIsProcessing(true);
+
+    try {
+      await fetch(`/api/agent/session/${session.id}/reject`, {
+        method: 'POST',
+      });
+    } catch (err) {
+      console.error('Reject API call failed:', err);
+    }
+
+    setPhase('idle');
+    setIsProcessing(false);
+
+    setMessages(prev => [
+      ...prev,
+      {
+        id: `assistant-rejected-${Date.now()}`,
+        role: 'assistant',
+        content: 'Plan rejected. No actions were taken. Feel free to send a revised task.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }
+    ]);
   };
 
   return (
     <div className="flex h-full w-full overflow-hidden">
       {/* Messages Column */}
-      <div className="flex-1 flex flex-col justify-between bg-ivory-50 h-full">
+      <div className="flex-1 flex flex-col justify-between bg-ivory-50 h-full min-w-0">
         {/* Scrollable messages container */}
-        <div className="flex-1 overflow-y-auto px-12 py-8 space-y-6">
+        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-5">
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -119,7 +232,7 @@ export default function ChatScreen({ selectedModelId, runtimeConnected }: ChatSc
 
               {/* Message text block */}
               <div>
-                <div className={`px-4.5 py-3.5 rounded-2xl text-[14px] leading-relaxed shadow-soft border ${
+                <div className={`px-4 py-3 rounded-2xl text-[14px] leading-relaxed shadow-soft border ${
                   msg.role === 'user'
                     ? 'bg-[#866854] text-white border-clay-dark rounded-tr-none'
                     : 'bg-white text-ivory-800 border-ivory-200 rounded-tl-none'
@@ -140,10 +253,25 @@ export default function ChatScreen({ selectedModelId, runtimeConnected }: ChatSc
               </div>
             </div>
           ))}
+
+          {/* Inline plan panel when in review phase */}
+          {plan && phase === 'plan-review' && (
+            <div className="max-w-3xl pl-12">
+              <AgentPlanPanel
+                plan={plan}
+                taskType={taskType || 'edit-code'}
+                onApprove={handleApprove}
+                onReject={handleReject}
+                isProcessing={isProcessing}
+              />
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
         </div>
 
         {/* Input panel */}
-        <div className="p-8 border-t border-ivory-200 bg-white">
+        <div className="p-6 border-t border-ivory-200 bg-white">
           <div className="max-w-3xl mx-auto relative flex items-center">
             <textarea
               value={input}
@@ -154,8 +282,8 @@ export default function ChatScreen({ selectedModelId, runtimeConnected }: ChatSc
                   handleSend();
                 }
               }}
-              placeholder={runtimeConnected ? "Ask agent to review workspace or generate features..." : "Start runtime server to write prompt..."}
-              disabled={!runtimeConnected}
+              placeholder={runtimeConnected ? "Describe your task (e.g., 'add a dark mode toggle' or 'fix the build error')..." : "Start runtime server to use the agent..."}
+              disabled={!runtimeConnected || isProcessing}
               className="w-full bg-ivory-50 border border-ivory-200 rounded-xl py-3.5 pl-4 pr-14 text-sm focus:outline-none focus:border-clay focus:ring-1 focus:ring-clay/20 resize-none h-14 max-h-32 disabled:bg-ivory-100/50 disabled:cursor-not-allowed text-ivory-800 placeholder-ivory-400"
             />
             <button
@@ -167,62 +295,17 @@ export default function ChatScreen({ selectedModelId, runtimeConnected }: ChatSc
             </button>
           </div>
           <div className="text-[10px] text-center text-ivory-400 mt-2.5">
-            Aster Code executes commands in a secure background runtime. Review and verify code suggestions carefully.
+            {plan ? 'Plan created. Approve or reject before execution.' : 'Aster Code uses an approval-gated agent loop. No autonomous file edits or commands.'}
           </div>
         </div>
       </div>
 
       {/* Agent Activity Panel */}
-      <div className="w-80 border-l border-ivory-200 bg-[#FAF9F6] h-full flex flex-col">
-        <div className="p-4 border-b border-ivory-200 flex items-center justify-between">
-          <h3 className="text-xs uppercase tracking-wider font-semibold text-ivory-500 flex items-center gap-2">
-            <Terminal className="w-3.5 h-3.5" />
-            Agent Activity log
-          </h3>
-          {isProcessing && (
-            <span className="w-1.5 h-1.5 rounded-full bg-clay animate-ping" />
-          )}
-        </div>
-
-        {/* Steps Stack */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {activity.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center p-6 text-ivory-400">
-              <MessageSquare className="w-8 h-8 mb-2 opacity-30 text-[#866854]" />
-              <p className="text-xs">No active runs. Chat with the agent to start editing files.</p>
-            </div>
-          ) : (
-            activity.map((step) => {
-              const getIcon = () => {
-                switch (step.type) {
-                  case 'thought':
-                    return <Sparkles className="w-3.5 h-3.5 text-amber-500" />;
-                  case 'tool_call':
-                    return <Play className="w-3.5 h-3.5 text-blue-500" />;
-                  case 'success':
-                    return <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />;
-                  case 'error':
-                    return <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />;
-                  default:
-                    return <FileCode className="w-3.5 h-3.5 text-ivory-500" />;
-                }
-              };
-
-              return (
-                <div key={step.id} className="p-3 bg-white rounded-lg border border-ivory-200/80 shadow-soft-sm flex gap-3 text-xs leading-relaxed">
-                  <div className="mt-0.5">{getIcon()}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-baseline mb-0.5">
-                      <span className="font-semibold text-ivory-800 truncate">{step.title}</span>
-                      <span className="text-[9px] text-ivory-400 font-mono shrink-0">{step.timestamp}</span>
-                    </div>
-                    <p className="text-ivory-500 font-mono text-[10px] break-all">{step.message}</p>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
+      <div className="w-80 border-l border-ivory-200 bg-[#FAF9F6] h-full flex flex-col shrink-0">
+        <AgentActivityFeed
+          events={events}
+          isExecuting={phase === 'executing' || phase === 'classifying'}
+        />
       </div>
     </div>
   );

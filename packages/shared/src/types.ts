@@ -96,3 +96,76 @@ export interface PreviewStatusEvent {
   url?: string | null;
   available: boolean;
 }
+
+/* ==========================================================================
+   AGENT SYSTEM TYPES
+   ========================================================================== */
+
+export type AgentTaskType =
+  | 'explain'
+  | 'plan'
+  | 'edit-code'
+  | 'debug-build'
+  | 'ui-fix'
+  | 'dependency-fix'
+  | 'docs';
+
+export type PermissionLevel =
+  | 'read-only'
+  | 'suggest-edits'
+  | 'apply-edits-after-approval'
+  | 'run-safe-commands-after-approval'
+  | 'dangerous-disabled';
+
+export type AgentPlanStatus = 'draft' | 'pending-approval' | 'approved' | 'rejected' | 'executing' | 'completed' | 'failed';
+
+export type AgentStepStatus = 'pending' | 'running' | 'done' | 'error' | 'blocked';
+
+export interface AgentPlanStep {
+  id: string;
+  title: string;
+  description: string;
+  reason: string;
+  skillId: string;
+  permissionLevel: PermissionLevel;
+  affectedFiles: string[];
+  toolName?: string;
+  status: AgentStepStatus;
+  startedAt?: string;
+  completedAt?: string;
+  error?: string;
+}
+
+export interface AgentPlan {
+  id: string;
+  sessionId: string;
+  taskType: AgentTaskType;
+  selectedSkillIds: string[];
+  steps: AgentPlanStep[];
+  status: AgentPlanStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AgentSessionInfo {
+  id: string;
+  taskDescription: string;
+  status: 'created' | 'planning' | 'awaiting-approval' | 'executing' | 'completed' | 'rejected' | 'failed';
+  taskType: AgentTaskType | null;
+  planId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AgentEvent {
+  id: string;
+  sessionId: string;
+  type: 'step-start' | 'step-complete' | 'step-error' | 'step-blocked' | 'plan-created' | 'approval-required' | 'execution-complete';
+  title: string;
+  message: string;
+  stepId?: string;
+  status: AgentStepStatus;
+  affectedFile?: string;
+  toolName?: string;
+  timestamp: string;
+}
