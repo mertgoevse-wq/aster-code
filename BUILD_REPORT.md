@@ -38,6 +38,17 @@ Status: SUCCESS — All builds pass cleanly
 - Provider filter change auto-selects first available model from filtered list
 - Loading/error/empty states: "Loading models..." while refreshing, "No models available" when empty
 
+## Workbench MVP Polish
+- Four-panel layout: file tree (left), editor with tab bar (center), terminal (bottom), preview with browser frame (right)
+- Multi-tab editor: open multiple files, switch tabs, unsaved indicator (dot), close with unsaved confirmation
+- Status bar: shows file path, line count, saved/unsaved status, save button
+- File tree: loading spinner, empty state, file-type icons (ts/js/json/css/html/md/image), create file/folder
+- Terminal: dark theme, disabled command buttons when offline, idle message, stop button during execution
+- Preview: browser frame chrome (red/yellow/green dots, URL bar), dash-centered empty state, live indicator
+- Offline overlay: centered message with runtime start instructions
+- All buttons disabled when runtime not connected
+- Consistent ivory/Claude-like theme throughout
+
 ## Agent Loop MVP — What Was Built
 
 ### Runtime Backend
