@@ -68,10 +68,22 @@ export class CustomProviderAdapter implements ProviderAdapter {
 }
 ```
 
-## Adding to the Registry
-
 Once implemented, register your adapter inside `apps/runtime/src/providers/registry.ts`:
 
 1. Import the class.
 2. Instantiate and add the adapter to the `adapters` Map in `initializeAdapters()`.
 3. Map credentials or configurations inside `getProviders()` check routines.
+
+## Supported Adapters in MVP
+
+1. **Ollama**: Queries local instance `tags` endpoint (`/api/tags`) to load active models.
+2. **LM Studio**: Connects to the local standard OpenAI compat API endpoint (`/v1/models`).
+3. **OpenRouter**: Fetches models list from the OpenRouter catalog API, including descriptions and context parameters.
+4. **NVIDIA NIM**: Integrates cloud inference models served from the NVIDIA API catalog.
+5. **OpenAI Compatible (Custom)**: Support generic host URLs with optional auth keys.
+
+## Caching and Auto-Refresh
+- Aggregated model details are cached in runtime memory.
+- **TTL Cache age**: Default 5 minutes (configurable via `MODEL_REFRESH_INTERVAL_MS` in `.env`).
+- Clicking the UI Sync button triggers a manual refresh bypass, clearing the cache and executing fresh HTTP queries.
+

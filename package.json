@@ -12,6 +12,7 @@
     "typecheck": "npm run typecheck --workspaces",
     "dev:web": "npm run dev --workspace=apps/web",
     "dev:runtime": "npm run dev --workspace=apps/runtime",
+    "runtime:build": "npm run build --workspace=apps/runtime",
     "dev": "concurrently \"npm run dev:runtime\" \"npm run dev:web\"",
     "start": "npm run start --workspace=apps/runtime"
   },

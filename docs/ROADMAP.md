@@ -7,10 +7,11 @@
 - [x] Chat interface with simulated Agent Activity timelines.
 - [x] Settings workspace storing templates in local storage.
 - [x] Documentation of security boundaries and integrations.
+- [x] Real provider adapters foundation, cache TTL, and status APIs.
 
 ## Phase 2: Live Connections & Real Completion
-- [ ] Connect chat panel to real Ollama and Anthropic SDK endpoints.
-- [ ] Connect settings panel to write directly to a local config file inside `apps/runtime`.
+- [ ] Connect chat panel completion outputs to active registry models.
+- [ ] Add direct Anthropic SDK and custom LLM inference endpoints.
 - [ ] Implement robust error checks and fallback strategies.
 
 ## Phase 3: Workspace Files & Preview Sandbox

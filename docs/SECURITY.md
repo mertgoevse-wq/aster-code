@@ -5,8 +5,9 @@ Security is built into Aster Code from day one. Since agent studios execute code
 ## Core Rules
 
 ### 1. No Credentials in Frontend UI
-- Frontend React applications must never have access to API keys.
+- Frontend React applications must never have permanent access to API keys.
 - API keys reside solely inside the backend `apps/runtime/.env` file.
+- Keys entered in the Settings panel are sent directly to the backend runtime server in-memory configurations. The frontend client explicitly scrubs all API keys before writing to `localStorage` to prevent key exposure via browser data dumps.
 - When querying model capabilities or listing adapters, the runtime only sends mock statuses or configuration booleans (e.g. `configured: true` or `configured: false`) to the frontend, never raw keys.
 
 ### 2. Sandbox Execution Directories

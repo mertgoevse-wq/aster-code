@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Key, Database, Trash2, Edit3, AlertCircle } from 'lucide-react';
+import { Key, Database, Trash2, Edit3, AlertCircle, ShieldAlert, ToggleLeft, ToggleRight } from 'lucide-react';
 import { SystemPromptTemplate, ProviderConfigs } from '@aster-code/shared';
 
 interface SettingsScreenProps {
@@ -10,13 +10,19 @@ interface SettingsScreenProps {
 export default function SettingsScreen({ runtimeConnected, onUpdateConfigs }: SettingsScreenProps) {
   // Provider Config state
   const [configs, setConfigs] = useState<ProviderConfigs>({
+    ollamaEnabled: true,
     ollamaUrl: 'http://localhost:11434',
+    lmstudioEnabled: true,
     lmstudioUrl: 'http://localhost:1234/v1',
+    openaiCompatibleEnabled: false,
     openaiCompatibleUrl: '',
-    openaiApiKey: '',
-    anthropicApiKey: '',
+    openaiCompatibleApiKey: '',
+    openrouterEnabled: false,
     openrouterApiKey: '',
-    nvidiaApiKey: ''
+    nvidiaEnabled: false,
+    nvidiaApiKey: '',
+    openaiApiKey: '',
+    anthropicApiKey: ''
   });
 
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
@@ -28,18 +34,49 @@ export default function SettingsScreen({ runtimeConnected, onUpdateConfigs }: Se
   const [newDesc, setNewDesc] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Load from local storage on mount
+  // Load from local storage and runtime status on mount
   useEffect(() => {
-    // Load config from localStorage if available
-    const savedConfig = localStorage.getItem('aster_provider_configs');
-    if (savedConfig) {
-      try {
-        const parsed = JSON.parse(savedConfig);
-        setConfigs(parsed);
-      } catch (e) {
-        console.error(e);
+    const loadData = async () => {
+      // 1. First load from localStorage for default browser inputs
+      const savedConfig = localStorage.getItem('aster_provider_configs');
+      let localConfigs: ProviderConfigs | null = null;
+      if (savedConfig) {
+        try {
+          localConfigs = JSON.parse(savedConfig);
+          setConfigs(prev => ({ ...prev, ...localConfigs }));
+        } catch (e) {
+          console.error(e);
+        }
       }
-    }
+
+      // 2. Query actual runtime configurations if connected
+      if (runtimeConnected) {
+        try {
+          const res = await fetch('/api/models/status');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.status && data.status.configs) {
+              const rConfigs = data.status.configs;
+              
+              setConfigs(prev => ({
+                ...prev,
+                ollamaEnabled: rConfigs.ollamaEnabled,
+                lmstudioEnabled: rConfigs.lmstudioEnabled,
+                openrouterEnabled: rConfigs.openrouterEnabled,
+                nvidiaEnabled: rConfigs.nvidiaEnabled,
+                openaiCompatibleEnabled: rConfigs.openaiCompatibleEnabled,
+                // Keep local URLs or fallback
+                ...(localConfigs || {})
+              }));
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to load settings metrics from runtime server', e);
+        }
+      }
+    };
+
+    loadData();
 
     // Load System Prompts
     const savedPrompts = localStorage.getItem('aster_system_prompts');
@@ -50,7 +87,6 @@ export default function SettingsScreen({ runtimeConnected, onUpdateConfigs }: Se
         console.error(e);
       }
     } else {
-      // Default library templates
       const defaultPrompts: SystemPromptTemplate[] = [
         {
           id: 'prompt-1',
@@ -71,13 +107,23 @@ export default function SettingsScreen({ runtimeConnected, onUpdateConfigs }: Se
       setPrompts(defaultPrompts);
       localStorage.setItem('aster_system_prompts', JSON.stringify(defaultPrompts));
     }
-  }, []);
+  }, [runtimeConnected]);
 
   const handleSaveConfigs = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaveStatus('saving');
     try {
-      localStorage.setItem('aster_provider_configs', JSON.stringify(configs));
+      // For security, do not save API keys in localStorage
+      const storageConfigs = { ...configs };
+      delete storageConfigs.openaiApiKey;
+      delete storageConfigs.anthropicApiKey;
+      delete storageConfigs.openrouterApiKey;
+      delete storageConfigs.nvidiaApiKey;
+      delete storageConfigs.openaiCompatibleApiKey;
+      
+      localStorage.setItem('aster_provider_configs', JSON.stringify(storageConfigs));
+      
+      // Update real runtime memory endpoints
       const success = await onUpdateConfigs(configs);
       if (success) {
         setSaveStatus('success');
@@ -96,7 +142,6 @@ export default function SettingsScreen({ runtimeConnected, onUpdateConfigs }: Se
     let updatedPrompts: SystemPromptTemplate[];
 
     if (editingId) {
-      // Edit
       updatedPrompts = prompts.map(p =>
         p.id === editingId
           ? { ...p, title: newTitle, prompt: newPrompt, description: newDesc }
@@ -104,7 +149,6 @@ export default function SettingsScreen({ runtimeConnected, onUpdateConfigs }: Se
       );
       setEditingId(null);
     } else {
-      // Add
       const added: SystemPromptTemplate = {
         id: `prompt-${Date.now()}`,
         title: newTitle,
@@ -141,99 +185,222 @@ export default function SettingsScreen({ runtimeConnected, onUpdateConfigs }: Se
     }
   };
 
+  const toggleProvider = (key: keyof ProviderConfigs) => {
+    setConfigs(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
   return (
     <div className="h-full w-full bg-ivory-50 overflow-y-auto p-8 flex flex-col gap-8">
       {/* Header */}
       <div className="border-b border-ivory-200 pb-6">
         <h1 className="font-serif text-3xl font-bold text-ivory-900 leading-tight">Settings</h1>
-        <p className="text-sm text-ivory-500 mt-1">Configure workspace API endpoints, provider keys, and default agent system prompts.</p>
+        <p className="text-sm text-ivory-500 mt-1">Configure active model providers, API endpoints, and system prompt templates.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-8 items-start">
         {/* Left Column: API Keys & Local Endpoints */}
         <div className="bg-white border border-ivory-200 rounded-xl p-6 shadow-soft space-y-6">
-          <h2 className="text-sm font-bold text-ivory-800 flex items-center gap-2 border-b border-ivory-100 pb-3">
-            <Key className="w-4.5 h-4.5 text-[#866854]" />
-            Provider Settings & API Keys
-          </h2>
+          <div className="flex justify-between items-center border-b border-ivory-100 pb-3">
+            <h2 className="text-sm font-bold text-ivory-800 flex items-center gap-2">
+              <Key className="w-4.5 h-4.5 text-[#866854]" />
+              Model Provider Configurations
+            </h2>
+            <div className="flex items-center gap-1 text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 border border-amber-100 rounded-full font-semibold">
+              <ShieldAlert className="w-3.5 h-3.5" />
+              <span>Keys stay in runtime memory</span>
+            </div>
+          </div>
 
-          <form onSubmit={handleSaveConfigs} className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-ivory-600">Ollama API URL</label>
-              <input
-                type="text"
-                value={configs.ollamaUrl}
-                onChange={e => setConfigs({ ...configs, ollamaUrl: e.target.value })}
-                className="w-full ivory-input"
-                placeholder="http://localhost:11434"
-              />
+          <form onSubmit={handleSaveConfigs} className="space-y-6">
+            {/* 1. Ollama */}
+            <div className="p-4 bg-ivory-50/50 rounded-xl border border-ivory-200/80 space-y-3.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-ivory-800">Ollama (Local Engine)</span>
+                <button
+                  type="button"
+                  onClick={() => toggleProvider('ollamaEnabled')}
+                  className="text-ivory-500 hover:text-clay transition-all"
+                >
+                  {configs.ollamaEnabled ? (
+                    <ToggleRight className="w-9 h-6 text-clay" />
+                  ) : (
+                    <ToggleLeft className="w-9 h-6 text-ivory-300" />
+                  )}
+                </button>
+              </div>
+              {configs.ollamaEnabled && (
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-ivory-500 uppercase">Ollama URL</label>
+                  <input
+                    type="text"
+                    value={configs.ollamaUrl}
+                    onChange={e => setConfigs({ ...configs, ollamaUrl: e.target.value })}
+                    className="w-full ivory-input bg-white text-xs"
+                    placeholder="http://localhost:11434"
+                  />
+                </div>
+              )}
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-ivory-600">LM Studio Server URL</label>
-              <input
-                type="text"
-                value={configs.lmstudioUrl}
-                onChange={e => setConfigs({ ...configs, lmstudioUrl: e.target.value })}
-                className="w-full ivory-input"
-                placeholder="http://localhost:1234/v1"
-              />
+            {/* 2. LM Studio */}
+            <div className="p-4 bg-ivory-50/50 rounded-xl border border-ivory-200/80 space-y-3.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-ivory-800">LM Studio (Local Server)</span>
+                <button
+                  type="button"
+                  onClick={() => toggleProvider('lmstudioEnabled')}
+                  className="text-ivory-500 hover:text-clay transition-all"
+                >
+                  {configs.lmstudioEnabled ? (
+                    <ToggleRight className="w-9 h-6 text-clay" />
+                  ) : (
+                    <ToggleLeft className="w-9 h-6 text-ivory-300" />
+                  )}
+                </button>
+              </div>
+              {configs.lmstudioEnabled && (
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-ivory-500 uppercase">LM Studio URL</label>
+                  <input
+                    type="text"
+                    value={configs.lmstudioUrl}
+                    onChange={e => setConfigs({ ...configs, lmstudioUrl: e.target.value })}
+                    className="w-full ivory-input bg-white text-xs"
+                    placeholder="http://localhost:1234/v1"
+                  />
+                </div>
+              )}
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-ivory-600">Custom OpenAI Compatible URL</label>
-              <input
-                type="text"
-                value={configs.openaiCompatibleUrl}
-                onChange={e => setConfigs({ ...configs, openaiCompatibleUrl: e.target.value })}
-                className="w-full ivory-input"
-                placeholder="https://api.yourdomain.com/v1"
-              />
+            {/* 3. OpenRouter */}
+            <div className="p-4 bg-ivory-50/50 rounded-xl border border-ivory-200/80 space-y-3.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-ivory-800">OpenRouter (Cloud Hub)</span>
+                <button
+                  type="button"
+                  onClick={() => toggleProvider('openrouterEnabled')}
+                  className="text-ivory-500 hover:text-clay transition-all"
+                >
+                  {configs.openrouterEnabled ? (
+                    <ToggleRight className="w-9 h-6 text-clay" />
+                  ) : (
+                    <ToggleLeft className="w-9 h-6 text-ivory-300" />
+                  )}
+                </button>
+              </div>
+              {configs.openrouterEnabled && (
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-ivory-500 uppercase">API Key</label>
+                  <input
+                    type="password"
+                    value={configs.openrouterApiKey || ''}
+                    onChange={e => setConfigs({ ...configs, openrouterApiKey: e.target.value })}
+                    className="w-full ivory-input bg-white text-xs"
+                    placeholder="Enter OpenRouter API key (sk-or-...)"
+                  />
+                </div>
+              )}
             </div>
 
-            <div className="border-t border-ivory-100 pt-4 space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-ivory-600">OpenAI API Key</label>
-                <input
-                  type="password"
-                  value={configs.openaiApiKey}
-                  onChange={e => setConfigs({ ...configs, openaiApiKey: e.target.value })}
-                  className="w-full ivory-input"
-                  placeholder="sk-proj-..."
-                />
+            {/* 4. NVIDIA NIM */}
+            <div className="p-4 bg-ivory-50/50 rounded-xl border border-ivory-200/80 space-y-3.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-ivory-800">NVIDIA NIM (Cloud API)</span>
+                <button
+                  type="button"
+                  onClick={() => toggleProvider('nvidiaEnabled')}
+                  className="text-ivory-500 hover:text-clay transition-all"
+                >
+                  {configs.nvidiaEnabled ? (
+                    <ToggleRight className="w-9 h-6 text-clay" />
+                  ) : (
+                    <ToggleLeft className="w-9 h-6 text-ivory-300" />
+                  )}
+                </button>
               </div>
+              {configs.nvidiaEnabled && (
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-ivory-500 uppercase">API Key</label>
+                  <input
+                    type="password"
+                    value={configs.nvidiaApiKey || ''}
+                    onChange={e => setConfigs({ ...configs, nvidiaApiKey: e.target.value })}
+                    className="w-full ivory-input bg-white text-xs"
+                    placeholder="Enter NVIDIA API key (nvapi-...)"
+                  />
+                </div>
+              )}
+            </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-ivory-600">Anthropic API Key</label>
-                <input
-                  type="password"
-                  value={configs.anthropicApiKey}
-                  onChange={e => setConfigs({ ...configs, anthropicApiKey: e.target.value })}
-                  className="w-full ivory-input"
-                  placeholder="sk-ant-..."
-                />
+            {/* 5. Custom OpenAI-Compatible */}
+            <div className="p-4 bg-ivory-50/50 rounded-xl border border-ivory-200/80 space-y-3.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-ivory-800">Custom OpenAI Endpoint</span>
+                <button
+                  type="button"
+                  onClick={() => toggleProvider('openaiCompatibleEnabled')}
+                  className="text-ivory-500 hover:text-clay transition-all"
+                >
+                  {configs.openaiCompatibleEnabled ? (
+                    <ToggleRight className="w-9 h-6 text-clay" />
+                  ) : (
+                    <ToggleLeft className="w-9 h-6 text-ivory-300" />
+                  )}
+                </button>
               </div>
+              {configs.openaiCompatibleEnabled && (
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-ivory-500 uppercase">Base URL</label>
+                    <input
+                      type="text"
+                      value={configs.openaiCompatibleUrl}
+                      onChange={e => setConfigs({ ...configs, openaiCompatibleUrl: e.target.value })}
+                      className="w-full ivory-input bg-white text-xs"
+                      placeholder="https://api.yourcustomserver.com/v1"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-ivory-500 uppercase">API Key</label>
+                    <input
+                      type="password"
+                      value={configs.openaiCompatibleApiKey || ''}
+                      onChange={e => setConfigs({ ...configs, openaiCompatibleApiKey: e.target.value })}
+                      className="w-full ivory-input bg-white text-xs"
+                      placeholder="Enter optional Bearer key"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-ivory-600">OpenRouter API Key</label>
-                <input
-                  type="password"
-                  value={configs.openrouterApiKey}
-                  onChange={e => setConfigs({ ...configs, openrouterApiKey: e.target.value })}
-                  className="w-full ivory-input"
-                  placeholder="sk-or-..."
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-ivory-600">NVIDIA NIM API Key</label>
-                <input
-                  type="password"
-                  value={configs.nvidiaApiKey}
-                  onChange={e => setConfigs({ ...configs, nvidiaApiKey: e.target.value })}
-                  className="w-full ivory-input"
-                  placeholder="nvapi-..."
-                />
+            {/* Cloud Native Defaults Setup */}
+            <div className="p-4 bg-ivory-50/30 rounded-xl border border-ivory-200/40 space-y-3">
+              <h3 className="text-xs font-bold text-ivory-600">Standard SDK APIs</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-ivory-500">OpenAI API Key</label>
+                  <input
+                    type="password"
+                    value={configs.openaiApiKey || ''}
+                    onChange={e => setConfigs({ ...configs, openaiApiKey: e.target.value })}
+                    className="w-full ivory-input bg-white text-xs"
+                    placeholder="sk-proj-..."
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-ivory-500">Anthropic API Key</label>
+                  <input
+                    type="password"
+                    value={configs.anthropicApiKey || ''}
+                    onChange={e => setConfigs({ ...configs, anthropicApiKey: e.target.value })}
+                    className="w-full ivory-input bg-white text-xs"
+                    placeholder="sk-ant-..."
+                  />
+                </div>
               </div>
             </div>
 
@@ -245,18 +412,30 @@ export default function SettingsScreen({ runtimeConnected, onUpdateConfigs }: Se
               >
                 {saveStatus === 'saving' && 'Saving...'}
                 {saveStatus === 'success' && 'Saved successfully!'}
-                {saveStatus === 'error' && 'Failed to save config'}
+                {saveStatus === 'error' && 'Failed to save configs'}
                 {saveStatus === 'idle' && 'Save configurations'}
               </button>
 
               {!runtimeConnected && (
                 <div className="flex items-center gap-1 text-[10px] text-amber-600">
                   <AlertCircle className="w-3.5 h-3.5" />
-                  Local settings will apply once backend restarts.
+                  Connection Offline
                 </div>
               )}
             </div>
           </form>
+
+          {/* Secure Instruction Box */}
+          <div className="text-[11px] leading-relaxed text-ivory-500 bg-ivory-100/50 p-4 border border-ivory-200 rounded-xl">
+            <span className="font-bold text-ivory-800 block mb-1">💡 Professional API Keys Guidance:</span>
+            To keep your keys safe from browser theft or session exposure, we recommend storing them permanently on your local drive. Create a `.env` file under the runtime directory and paste them:
+            <pre className="font-mono bg-white p-2 rounded border border-ivory-200 mt-2 text-[10px] text-ivory-700 overflow-x-auto select-all">
+{`OLLAMA_BASE_URL=http://localhost:11434
+LMSTUDIO_BASE_URL=http://localhost:1234/v1
+OPENROUTER_API_KEY=your_key_here
+NVIDIA_API_KEY=your_key_here`}
+            </pre>
+          </div>
         </div>
 
         {/* Right Column: System Prompt Library */}
@@ -266,7 +445,6 @@ export default function SettingsScreen({ runtimeConnected, onUpdateConfigs }: Se
             System Prompt Library
           </h2>
 
-          {/* Form to create/edit system prompts */}
           <div className="bg-ivory-50/50 p-4 rounded-xl border border-ivory-200/80 space-y-3">
             <h3 className="text-xs font-semibold text-ivory-700">
               {editingId ? 'Edit system prompt template' : 'Create new system prompt template'}

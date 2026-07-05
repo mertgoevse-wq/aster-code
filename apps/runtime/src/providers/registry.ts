@@ -1,6 +1,9 @@
-import { ModelMetadata, ProviderInfo, ProviderId } from '@aster-code/shared';
+import { ModelMetadata, ProviderInfo, ProviderId, ProviderConfigs } from '@aster-code/shared';
 import { ProviderAdapter } from './types.js';
 import { OllamaAdapter } from './ollama.js';
+import { LMStudioAdapter } from './lmstudio.js';
+import { OpenRouterAdapter } from './openrouter.js';
+import { NvidiaAdapter } from './nvidia.js';
 import { OpenAICompatibleAdapter } from './openaiCompatible.js';
 
 export class ModelRegistry {
@@ -9,18 +12,33 @@ export class ModelRegistry {
   private lastRefreshTime: string | null = null;
   private isRefreshing = false;
   private refreshInterval: NodeJS.Timeout | null = null;
+  private lastCheckedStatus: Record<ProviderId, { status: 'online' | 'offline' | 'unconfigured'; latencyMs?: number }> = {
+    openai: { status: 'unconfigured' },
+    anthropic: { status: 'unconfigured' },
+    openrouter: { status: 'unconfigured' },
+    ollama: { status: 'offline' },
+    lmstudio: { status: 'offline' },
+    'openai-compatible': { status: 'unconfigured' },
+    nvidia: { status: 'unconfigured' }
+  };
 
-  // Configuration settings (with defaults)
+  // Cache configuration
   private config = {
-    autoRefreshEnabled: true,
-    autoRefreshIntervalMs: 5 * 60 * 1000, // 5 minutes
+    ollamaEnabled: true,
     ollamaUrl: 'http://localhost:11434',
+    lmstudioEnabled: true,
     lmstudioUrl: 'http://localhost:1234/v1',
+    openaiCompatibleEnabled: false,
     openaiCompatibleUrl: '',
+    openaiCompatibleApiKey: '',
+    openrouterEnabled: false,
+    openrouterApiKey: '',
+    nvidiaEnabled: false,
+    nvidiaApiKey: '',
     openaiApiKey: '',
     anthropicApiKey: '',
-    openrouterApiKey: '',
-    nvidiaApiKey: ''
+    autoRefreshEnabled: true,
+    autoRefreshIntervalMs: 5 * 60 * 1000 // 5 minutes TTL default
   };
 
   constructor() {
@@ -34,7 +52,7 @@ export class ModelRegistry {
     this.config = { ...this.config, ...newConfig };
     this.initializeAdapters();
 
-    // Restart timer if parameters changed
+    // Reset background polling if configs changed
     this.stopBackgroundRefresh();
     if (this.config.autoRefreshEnabled) {
       this.startBackgroundRefresh();
@@ -45,22 +63,62 @@ export class ModelRegistry {
     this.adapters.clear();
 
     // 1. Ollama
-    this.adapters.set('ollama', new OllamaAdapter(this.config.ollamaUrl));
+    if (this.config.ollamaEnabled) {
+      this.adapters.set('ollama', new OllamaAdapter(this.config.ollamaUrl));
+    }
 
     // 2. LM Studio
-    this.adapters.set('lmstudio', new OpenAICompatibleAdapter('lmstudio', 'LM Studio', this.config.lmstudioUrl));
+    if (this.config.lmstudioEnabled) {
+      this.adapters.set('lmstudio', new LMStudioAdapter(this.config.lmstudioUrl));
+    }
 
     // 3. OpenRouter
-    this.adapters.set('openrouter', new OpenAICompatibleAdapter('openrouter', 'OpenRouter', 'https://openrouter.ai/api/v1'));
+    if (this.config.openrouterEnabled) {
+      this.adapters.set('openrouter', new OpenRouterAdapter(this.config.openrouterApiKey));
+    }
 
-    // 4. NVIDIA
-    this.adapters.set('nvidia', new OpenAICompatibleAdapter('nvidia', 'NVIDIA API', 'https://integrate.api.nvidia.com/v1'));
+    // 4. NVIDIA NIM
+    if (this.config.nvidiaEnabled) {
+      this.adapters.set('nvidia', new NvidiaAdapter(this.config.nvidiaApiKey));
+    }
 
     // 5. OpenAI Compatible (Custom)
-    if (this.config.openaiCompatibleUrl) {
+    if (this.config.openaiCompatibleEnabled && this.config.openaiCompatibleUrl) {
       this.adapters.set(
         'openai-compatible',
-        new OpenAICompatibleAdapter('openai-compatible', 'Custom LLM', this.config.openaiCompatibleUrl)
+        new OpenAICompatibleAdapter(
+          'openai-compatible',
+          'Custom LLM',
+          this.config.openaiCompatibleUrl,
+          this.config.openaiCompatibleApiKey
+        )
+      );
+    }
+
+    // 6. Direct OpenAI/Anthropic cloud options setup when configured
+    if (this.config.openaiApiKey) {
+      this.adapters.set(
+        'openai',
+        new OpenAICompatibleAdapter(
+          'openai',
+          'OpenAI API',
+          'https://api.openai.com/v1',
+          this.config.openaiApiKey
+        )
+      );
+    }
+
+    if (this.config.anthropicApiKey) {
+      // For MVP 0.1 listModels, we wrap it into OpenAI Compatible adapter targeting Anthropic's proxy if relevant,
+      // or standard static models mapping.
+      this.adapters.set(
+        'anthropic',
+        new OpenAICompatibleAdapter(
+          'anthropic',
+          'Anthropic API',
+          'https://api.anthropic.com/v1', // Placeholder URL for type resolution
+          this.config.anthropicApiKey
+        )
       );
     }
   }
@@ -68,33 +126,43 @@ export class ModelRegistry {
   getProviders(): ProviderInfo[] {
     const list: ProviderId[] = ['openai', 'anthropic', 'openrouter', 'ollama', 'lmstudio', 'openai-compatible', 'nvidia'];
     return list.map(id => {
-      const adapter = this.adapters.get(id);
+      let enabled = false;
       let configured = false;
-      let enabled = true;
       let baseUrl = '';
 
       switch (id) {
         case 'openai':
+          enabled = !!this.config.openaiApiKey;
           configured = !!this.config.openaiApiKey;
+          baseUrl = 'https://api.openai.com/v1';
           break;
         case 'anthropic':
+          enabled = !!this.config.anthropicApiKey;
           configured = !!this.config.anthropicApiKey;
+          baseUrl = 'https://api.anthropic.com/v1';
           break;
         case 'openrouter':
+          enabled = this.config.openrouterEnabled;
           configured = !!this.config.openrouterApiKey;
+          baseUrl = 'https://openrouter.ai/api/v1';
           break;
         case 'nvidia':
+          enabled = this.config.nvidiaEnabled;
           configured = !!this.config.nvidiaApiKey;
+          baseUrl = 'https://integrate.api.nvidia.com/v1';
           break;
         case 'ollama':
+          enabled = this.config.ollamaEnabled;
           configured = true;
           baseUrl = this.config.ollamaUrl;
           break;
         case 'lmstudio':
+          enabled = this.config.lmstudioEnabled;
           configured = true;
           baseUrl = this.config.lmstudioUrl;
           break;
         case 'openai-compatible':
+          enabled = this.config.openaiCompatibleEnabled;
           configured = !!this.config.openaiCompatibleUrl;
           baseUrl = this.config.openaiCompatibleUrl;
           break;
@@ -102,7 +170,7 @@ export class ModelRegistry {
 
       return {
         id,
-        displayName: adapter?.displayName || id.toUpperCase(),
+        displayName: this.adapters.get(id)?.displayName || id.toUpperCase(),
         enabled,
         configured,
         baseUrl: baseUrl || undefined
@@ -110,7 +178,15 @@ export class ModelRegistry {
     });
   }
 
-  async refreshModels(): Promise<{ models: ModelMetadata[]; lastRefreshAt: string }> {
+  async refreshModels(bypassCache = true): Promise<{ models: ModelMetadata[]; lastRefreshAt: string }> {
+    // If cache is fresh (within TTL) and we don't bypass, return cache
+    if (!bypassCache && this.modelCache.length > 0 && this.lastRefreshTime) {
+      const cacheAgeMs = Date.now() - new Date(this.lastRefreshTime).getTime();
+      if (cacheAgeMs < this.config.autoRefreshIntervalMs) {
+        return { models: this.modelCache, lastRefreshAt: this.lastRefreshTime };
+      }
+    }
+
     if (this.isRefreshing) {
       return { models: this.modelCache, lastRefreshAt: this.lastRefreshTime || new Date().toISOString() };
     }
@@ -118,9 +194,9 @@ export class ModelRegistry {
     this.isRefreshing = true;
     const aggregatedModels: ModelMetadata[] = [];
 
-    // Let's also prepend standard Anthropic and OpenAI models as placeholders/static items
-    // since the prompt says "GET /models and models refresh returns mocked data first, no real provider API calls yet"
-    const staticCloudModels: ModelMetadata[] = [
+    // Prepopulate standard defaults if their parent provider is enabled but returns empty list
+    // (e.g. Anthropic/OpenAI APIs which might not have a public listModels endpoint without keys)
+    const fallbackCloudModels: ModelMetadata[] = [
       {
         id: 'anthropic/claude-3-5-sonnet-latest',
         displayName: 'Claude 3.5 Sonnet (Latest)',
@@ -132,23 +208,8 @@ export class ModelRegistry {
         supportsTools: true,
         supportsVision: true,
         supportsStreaming: true,
-        bestFor: 'Coding, Reasoning, UI Building',
-        description: 'Anthropic\'s most powerful model, excels at complex logical steps.',
-        lastCheckedAt: new Date().toISOString()
-      },
-      {
-        id: 'anthropic/claude-3-5-haiku-latest',
-        displayName: 'Claude 3.5 Haiku (Latest)',
-        provider: 'anthropic',
-        contextWindow: 200000,
-        maxOutputTokens: 4096,
-        inputModalities: ['text'],
-        outputModalities: ['text'],
-        supportsTools: true,
-        supportsVision: false,
-        supportsStreaming: true,
-        bestFor: 'Fast execution, simple edits',
-        description: 'Anthropic\'s fastest and most cost-effective model.',
+        bestFor: 'Coding & Planning',
+        description: 'Default Anthropic model.',
         lastCheckedAt: new Date().toISOString()
       },
       {
@@ -162,21 +223,49 @@ export class ModelRegistry {
         supportsTools: true,
         supportsVision: true,
         supportsStreaming: true,
-        bestFor: 'General problem solving, multilingual tasks',
-        description: 'OpenAI\'s flagship multimodal intelligence engine.',
+        bestFor: 'Structured Analysis',
+        description: 'Default OpenAI flagship model.',
         lastCheckedAt: new Date().toISOString()
       }
     ];
 
-    aggregatedModels.push(...staticCloudModels);
-
-    for (const [providerId, adapter] of this.adapters.entries()) {
+    // Query active adapters in parallel
+    const promises = Array.from(this.adapters.entries()).map(async ([providerId, adapter]) => {
+      const startTime = Date.now();
       try {
-        const models = await adapter.listModels();
-        aggregatedModels.push(...models);
+        const isUp = await adapter.health();
+        if (isUp) {
+          const models = await adapter.listModels();
+          this.lastCheckedStatus[providerId] = {
+            status: 'online',
+            latencyMs: Date.now() - startTime
+          };
+          return { providerId, models };
+        } else {
+          this.lastCheckedStatus[providerId] = { status: 'offline' };
+          return { providerId, models: [] };
+        }
       } catch (err) {
-        console.error(`Error loading models for provider ${providerId}:`, err);
+        this.lastCheckedStatus[providerId] = { status: 'offline' };
+        return { providerId, models: [] };
       }
+    });
+
+    const results = await Promise.all(promises);
+
+    for (const { providerId, models } of results) {
+      if (models.length > 0) {
+        aggregatedModels.push(...models);
+      } else if (providerId === 'openai' && this.config.openaiApiKey) {
+        aggregatedModels.push(fallbackCloudModels[1]);
+      } else if (providerId === 'anthropic' && this.config.anthropicApiKey) {
+        aggregatedModels.push(fallbackCloudModels[0]);
+      }
+    }
+
+    // Always keep fallback if registry is completely empty (helps beginner onboarding feel robust)
+    if (aggregatedModels.length === 0) {
+      aggregatedModels.push(...fallbackCloudModels);
     }
 
     this.modelCache = aggregatedModels;
@@ -190,9 +279,15 @@ export class ModelRegistry {
   }
 
   getModels(): ModelMetadata[] {
-    // If cache is empty, load statically/initially. Real refresh handles async.
+    // If cache is empty, load statically. If TTL expired, refresh asynchronously.
     if (this.modelCache.length === 0) {
-      this.refreshModels().catch(console.error);
+      this.refreshModels(false).catch(console.error);
+    } else if (this.lastRefreshTime) {
+      const ageMs = Date.now() - new Date(this.lastRefreshTime).getTime();
+      if (ageMs > this.config.autoRefreshIntervalMs) {
+        console.log('Cache TTL expired. Triggering async refresh...');
+        this.refreshModels(false).catch(console.error);
+      }
     }
     return this.modelCache;
   }
@@ -201,10 +296,29 @@ export class ModelRegistry {
     return this.lastRefreshTime;
   }
 
+  getStatusMetrics() {
+    return {
+      isRefreshing: this.isRefreshing,
+      lastCheckedAt: this.lastRefreshTime,
+      cacheTTLMs: this.config.autoRefreshIntervalMs,
+      cacheSize: this.modelCache.length,
+      providerStatus: this.lastCheckedStatus,
+      configs: {
+        ollamaEnabled: this.config.ollamaEnabled,
+        lmstudioEnabled: this.config.lmstudioEnabled,
+        openrouterEnabled: this.config.openrouterEnabled,
+        nvidiaEnabled: this.config.nvidiaEnabled,
+        openaiCompatibleEnabled: this.config.openaiCompatibleEnabled,
+        openaiConfigured: !!this.config.openaiApiKey,
+        anthropicConfigured: !!this.config.anthropicApiKey
+      }
+    };
+  }
+
   private startBackgroundRefresh() {
     this.refreshInterval = setInterval(async () => {
       console.log('Background refreshing model cache...');
-      await this.refreshModels();
+      await this.refreshModels(true);
     }, this.config.autoRefreshIntervalMs);
   }
 

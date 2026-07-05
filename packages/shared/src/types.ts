@@ -13,6 +13,7 @@ export interface ModelMetadata {
   description: string;
   deprecated?: boolean;
   lastCheckedAt: string;
+  raw?: any;
 }
 
 export type ProviderId = 'openai' | 'anthropic' | 'openrouter' | 'ollama' | 'lmstudio' | 'openai-compatible' | 'nvidia';
@@ -61,11 +62,18 @@ export interface AgentActivityStep {
 }
 
 export interface ProviderConfigs {
+  ollamaEnabled: boolean;
   ollamaUrl: string;
+  lmstudioEnabled: boolean;
   lmstudioUrl: string;
+  openaiCompatibleEnabled: boolean;
   openaiCompatibleUrl: string;
+  openaiCompatibleApiKey?: string;
+  openrouterEnabled: boolean;
+  openrouterApiKey?: string;
+  nvidiaEnabled: boolean;
+  nvidiaApiKey?: string;
   openaiApiKey?: string;
   anthropicApiKey?: string;
-  openrouterApiKey?: string;
-  nvidiaApiKey?: string;
 }
+

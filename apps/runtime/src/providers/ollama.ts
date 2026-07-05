@@ -7,50 +7,81 @@ export class OllamaAdapter implements ProviderAdapter {
   private baseUrl: string;
 
   constructor(baseUrl = 'http://localhost:11434') {
-    this.baseUrl = baseUrl;
+    this.baseUrl = baseUrl.replace(/\/$/, ''); // Remove trailing slash
+  }
+
+  private async fetchWithTimeout(url: string, options: RequestInit = {}, timeout = 2500): Promise<Response> {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+      clearTimeout(id);
+      return response;
+    } catch (err) {
+      clearTimeout(id);
+      throw err;
+    }
   }
 
   async health(): Promise<boolean> {
-    // In MVP 0.1, we assume success or return false on timeout
-    return true;
+    try {
+      const res = await this.fetchWithTimeout(this.baseUrl);
+      return res.status === 200;
+    } catch (e) {
+      return false;
+    }
   }
 
   async listModels(): Promise<ModelMetadata[]> {
-    // Mocked Ollama response for MVP 0.1
-    const rawModels = [
-      { name: 'llama3:8b', size: 4700000000, details: { parameter_size: '8B', family: 'llama' } },
-      { name: 'mistral:7b', size: 4100000000, details: { parameter_size: '7B', family: 'mistral' } },
-      { name: 'phi3:3.8b', size: 2200000000, details: { parameter_size: '3.8B', family: 'phi3' } },
-      { name: 'codegemma:7b', size: 4800000000, details: { parameter_size: '7B', family: 'gemma' } }
-    ];
-
-    return rawModels.map(m => this.normalizeModel(m));
+    try {
+      const res = await this.fetchWithTimeout(`${this.baseUrl}/api/tags`);
+      if (!res.ok) {
+        throw new Error(`Ollama returned status ${res.status}`);
+      }
+      const data = await res.json();
+      if (!data || !Array.isArray(data.models)) {
+        return [];
+      }
+      return data.models.map((m: any) => this.normalizeModel(m));
+    } catch (err) {
+      console.warn(`[Ollama] Failed to list models from ${this.baseUrl}:`, err instanceof Error ? err.message : err);
+      return [];
+    }
   }
 
   async getCapabilities(modelId: string) {
+    const idLower = modelId.toLowerCase();
     return {
-      supportsTools: modelId.includes('llama3') || modelId.includes('mistral'),
-      supportsVision: false,
+      supportsTools: idLower.includes('llama3') || idLower.includes('mistral') || idLower.includes('command-r'),
+      supportsVision: idLower.includes('llava') || idLower.includes('bakllava') || idLower.includes('vision'),
       supportsStreaming: true
     };
   }
 
   normalizeModel(rawModel: any): ModelMetadata {
-    const isCode = rawModel.name.includes('code');
+    const name = rawModel.name || 'unknown';
+    const isCode = name.includes('code') || name.includes('coder') || name.includes('deepseek');
+    const paramSize = rawModel.details?.parameter_size || 'Unknown';
+    const quantization = rawModel.details?.quantization_level || 'Unknown';
+
     return {
-      id: `ollama/${rawModel.name}`,
-      displayName: rawModel.name,
+      id: `ollama/${name}`,
+      displayName: name,
       provider: 'ollama',
-      contextWindow: 8192,
-      maxOutputTokens: 2048,
-      inputModalities: ['text'],
+      contextWindow: isCode ? 16384 : 8192,
+      maxOutputTokens: 4096,
+      inputModalities: name.includes('llava') ? ['text', 'image'] : ['text'],
       outputModalities: ['text'],
-      supportsTools: rawModel.name.includes('llama3') || rawModel.name.includes('mistral'),
-      supportsVision: false,
+      supportsTools: name.includes('llama3') || name.includes('mistral') || name.includes('command-r'),
+      supportsVision: name.includes('llava') || name.includes('bakllava') || name.includes('vision'),
       supportsStreaming: true,
-      bestFor: isCode ? 'Coding & Code Autocomplete' : 'General Assistance & Local Chat',
-      description: `Local LLM run via Ollama. Parameter size: ${rawModel.details.parameter_size || 'Unknown'}.`,
-      lastCheckedAt: new Date().toISOString()
+      bestFor: isCode ? 'Local Coding & Code Autocomplete' : 'Local Chat & Reasoning',
+      description: `Local model run via Ollama. Param Size: ${paramSize}, Quantization: ${quantization}. Size: ${(rawModel.size / (1024 * 1024 * 1024)).toFixed(2)} GB.`,
+      lastCheckedAt: new Date().toISOString(),
+      raw: rawModel
     };
   }
 }
