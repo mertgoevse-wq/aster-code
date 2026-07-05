@@ -18,6 +18,17 @@ Status: SUCCESS — All builds pass cleanly
 - Frontend components (`AgentActivityFeed`, `AgentPlanPanel`) compile correctly
 - ChatScreen and SkillsScreen integrate with backend APIs without type errors
 
+## System Prompt Library Enhancement
+- Added `tags: string[]` and `updatedAt: string` fields to `SystemPromptTemplate`
+- SettingsScreen: full CRUD with create, edit, duplicate, delete, set-as-default
+- SettingsScreen: tag input with Enter/comma add and remove
+- SettingsScreen: export prompts as downloadable JSON file
+- SettingsScreen: import prompts via JSON paste or file upload (merges by id)
+- SettingsScreen: active prompt selection persisted to localStorage
+- ChatScreen: displays active prompt badge with clear button
+- ChatScreen: polls for prompt changes via `visibilitychange` + `storage` events
+- Shared localStorage helpers exported from SettingsScreen, imported by ChatScreen
+
 ## Agent Loop MVP — What Was Built
 
 ### Runtime Backend

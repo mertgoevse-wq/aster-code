@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send } from 'lucide-react';
+import { Send, X, Star } from 'lucide-react';
 import { ChatMessage, AgentEvent, AgentPlan, AgentSessionInfo, AgentTaskType } from '@aster-code/shared';
 import AgentActivityFeed from '../components/AgentActivityFeed.tsx';
 import AgentPlanPanel from '../components/AgentPlanPanel.tsx';
+import { getSelectedPromptId, setSelectedPromptId, getPromptById } from './SettingsScreen.tsx';
 
 interface ChatScreenProps {
   selectedModelId: string;
@@ -28,11 +29,45 @@ export default function ChatScreen({ selectedModelId: _selectedModelId, runtimeC
   const [taskType, setTaskType] = useState<AgentTaskType | null>(null);
   const [phase, setPhase] = useState<'idle' | 'classifying' | 'plan-review' | 'executing' | 'done'>('idle');
 
+  // Active system prompt — polled on visibility change for in-app tab switches
+  const [activePrompt, setActivePrompt] = useState<{ id: string; title: string } | null>(() => {
+    const id = getSelectedPromptId();
+    if (!id) return null;
+    const p = getPromptById(id);
+    return p ? { id: p.id, title: p.title } : null;
+  });
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Poll for prompt changes when tab becomes visible (covers in-app tab switches)
+  useEffect(() => {
+    const refreshPrompt = () => {
+      const id = getSelectedPromptId();
+      if (!id) {
+        setActivePrompt(null);
+        return;
+      }
+      const p = getPromptById(id);
+      setActivePrompt(p ? { id: p.id, title: p.title } : null);
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') refreshPrompt();
+    };
+    const onStorage = () => refreshPrompt(); // cross-tab
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('storage', onStorage);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
 
   const handleSend = async () => {
     if (!input.trim() || isProcessing || !runtimeConnected) return;
@@ -216,6 +251,27 @@ export default function ChatScreen({ selectedModelId: _selectedModelId, runtimeC
     <div className="flex h-full w-full overflow-hidden">
       {/* Messages Column */}
       <div className="flex-1 flex flex-col justify-between bg-ivory-50 h-full min-w-0">
+        {/* Active prompt badge */}
+        {activePrompt && (
+          <div className="px-8 pt-4 pb-0">
+            <div className="max-w-3xl mx-auto flex items-center gap-2 bg-clay/5 border border-clay/20 rounded-lg px-3 py-1.5 text-[11px]">
+              <Star className="w-3 h-3 text-clay fill-clay" />
+              <span className="text-clay font-medium">System Prompt:</span>
+              <span className="text-ivory-600 truncate">{activePrompt.title}</span>
+              <button
+                onClick={() => {
+                  setSelectedPromptId(null);
+                  setActivePrompt(null);
+                }}
+                className="ml-auto text-ivory-400 hover:text-rose-500 shrink-0"
+                title="Clear system prompt"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Scrollable messages container */}
         <div className="flex-1 overflow-y-auto px-8 py-6 space-y-5">
           {messages.map((msg) => (

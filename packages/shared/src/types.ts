@@ -40,8 +40,11 @@ export interface SystemPromptTemplate {
   title: string;
   prompt: string;
   description?: string;
+  tags: string[];
+  isDefault?: boolean;
   isSystemDefault?: boolean;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface ChatMessage {

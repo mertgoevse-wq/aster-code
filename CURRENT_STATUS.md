@@ -75,6 +75,8 @@ aster-code/
 9. **Runtime connectivity** — Health polling every 8 seconds, graceful offline state
 10. **🆕 AgentActivityFeed** — Real-time step timeline with status icons, tool badges, timestamps
 11. **🆕 AgentPlanPanel** — Expandable step list, permission badges, approve/reject buttons
+12. **🆕 System Prompt Library** — Full CRUD with tags, duplicate, export/import JSON, localStorage persistence
+13. **🆕 Chat prompt badge** — Active prompt displayed in chat, syncs across tabs
 
 ---
 
