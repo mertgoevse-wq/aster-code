@@ -14,6 +14,7 @@ import { runner } from './commands.js';
 import { addClient, removeClient } from './events.js';
 import { sessionStore } from './agent/sessionStore.js';
 import { classifyTask, selectSkillsForTask, generatePlan } from './agent/planner.js';
+import { routeAgentTasks } from './agent/agentRouter.js';
 import { executeApprovedPlan } from './agent/loop.js';
 import { skillsRegistry } from './skills/registry.js';
 
@@ -333,12 +334,11 @@ app.post('/agent/session/:id/plan', (req, res) => {
       return res.status(409).json({ success: false, error: 'Session is already executing.' });
     }
 
-    // 1. Classify task
-    const classification = classifyTask(session.info.taskDescription);
+    // 1. Run the routing pipeline (intent classifier → skill router → agent router)
+    const routing = routeAgentTasks(session.info.taskDescription);
 
-    // 2. Select skills
-    const activeSkills = skillsRegistry.getActiveSkills();
-    const selectedSkillIds = selectSkillsForTask(classification.taskType, activeSkills);
+    // 2. Classify task (legacy, used for plan generation)
+    const classification = classifyTask(session.info.taskDescription);
 
     // 3. Update session with task type
     sessionStore.updateSession(session.info.id, {
@@ -346,7 +346,11 @@ app.post('/agent/session/:id/plan', (req, res) => {
       status: 'planning'
     });
 
-    // 4. Generate plan
+    // 4. Generate plan using routed skills (fallback to legacy selector)
+    const selectedSkillIds = routing.selectedSkills.length > 0
+      ? routing.selectedSkills.map(s => s.skillId)
+      : selectSkillsForTask(classification.taskType, skillsRegistry.getActiveSkills());
+
     const plan = generatePlan(
       session.info.id,
       session.info.taskDescription,
@@ -372,6 +376,7 @@ app.post('/agent/session/:id/plan', (req, res) => {
     res.json({
       success: true,
       classification,
+      routing,
       plan,
       selectedSkills: selectedSkillIds
     });

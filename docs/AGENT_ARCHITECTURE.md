@@ -6,6 +6,55 @@ Aster Code implements a **safe, approval-gated agent loop** that ensures no auto
 
 ## Agent Loop
 
+The agent loop now includes automatic routing:
+
+```
+User Prompt → Intent Classifier → Skill Router → Agent Router → Plan → Approval → Execution
+```
+
+### Intent Classification
+
+Before generating a plan, the system classifies the user's prompt into one or more of 14 intent categories:
+
+| Intent | Description |
+|--------|-------------|
+| explain-code | Explaining code or concepts |
+| build-feature | Creating new functionality |
+| fix-bug | Fixing errors/bugs |
+| debug-build | Build/type errors |
+| improve-ui | Styling/layout changes |
+| dependency-task | Package management |
+| write-tests | Testing |
+| create-docs | Documentation |
+| refactor | Restructuring code |
+| setup-runtime | Dev server/config |
+| model-provider-task | LLM providers/models |
+| mcp-tool-task | MCP tools/integrations |
+| git-task | Version control |
+| unknown | Fallback |
+
+### Skill Routing
+
+Each intent maps to candidate skills with:
+- Confidence score (0-1)
+- Reasoning for selection
+- Required permissions
+- Risk level (low/medium/high)
+
+The router selects skills from the active skills registry and deduplicates.
+
+### Routing Pipeline Files
+
+| File | Responsibility |
+|------|---------------|
+| `agent/intentClassifier.ts` | Rule-based keyword classification into 14 intents |
+| `agent/skillRouter.ts` | Intent-to-skill mapping with confidence/permissions/risk |
+| `agent/agentRouter.ts` | Orchestrates: classify → route → result |
+
+---
+
+## Agent Loop
+
 ```
 ┌──────────┐    task     ┌───────────┐   classify   ┌──────────┐   plan    ┌──────────┐
 │  User    │ ──────────> │  Runtime   │ ──────────>  │ Planner  │ ────────> │  Plan    │

@@ -55,6 +55,13 @@ The agent loop architecture is in place but execution is simulated. The next pro
 
 ---
 
+## Completed: Agent Skill Routing ✅
+- `apps/runtime/src/agent/intentClassifier.ts` — 14-intent classifier
+- `apps/runtime/src/agent/skillRouter.ts` — intent-to-skill mapping with confidence/risk
+- `apps/runtime/src/agent/agentRouter.ts` — full routing pipeline
+- `apps/web/src/components/AgentRoutingPreview.tsx` — routing visualization
+- ChatScreen shows routing preview before plan
+
 ## Completed: External Repo Research ✅
 - 29 repos analyzed, 12 cloned shallowly into `_research/import-candidates/`
 - `docs/EXTERNAL_REPO_RESEARCH.md`, `SKILL_CANDIDATE_MATRIX.md`, `REPO_LICENSE_REVIEW.md`

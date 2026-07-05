@@ -113,6 +113,55 @@ export type AgentTaskType =
   | 'dependency-fix'
   | 'docs';
 
+export type AgentIntentType =
+  | 'explain-code'
+  | 'build-feature'
+  | 'fix-bug'
+  | 'debug-build'
+  | 'improve-ui'
+  | 'dependency-task'
+  | 'write-tests'
+  | 'create-docs'
+  | 'refactor'
+  | 'setup-runtime'
+  | 'model-provider-task'
+  | 'mcp-tool-task'
+  | 'git-task'
+  | 'unknown';
+
+export type RiskLevel = 'low' | 'medium' | 'high';
+
+export interface SkillCandidate {
+  skillId: string;
+  skillName: string;
+  confidence: number;
+  reason: string;
+  requiredPermissions: string[];
+  riskLevel: RiskLevel;
+}
+
+export interface IntentMatch {
+  intent: AgentIntentType;
+  confidence: number;
+  reason: string;
+  candidates: SkillCandidate[];
+}
+
+export interface RoutingResult {
+  intents: IntentMatch[];
+  selectedSkills: SkillCandidate[];
+  requiresApproval: boolean;
+  summary: string;
+}
+
+export interface RoutingSettings {
+  autoRoute: boolean;
+  autoRunReadOnly: boolean;
+  requireApprovalFileEdits: boolean;
+  requireApprovalCommands: boolean;
+  requireApprovalMcp: boolean;
+}
+
 export type PermissionLevel =
   | 'read-only'
   | 'suggest-edits'

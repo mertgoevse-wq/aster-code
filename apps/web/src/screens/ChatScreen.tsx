@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, X, Star } from 'lucide-react';
-import { ChatMessage, AgentEvent, AgentPlan, AgentSessionInfo, AgentTaskType } from '@aster-code/shared';
+import { ChatMessage, AgentEvent, AgentPlan, AgentSessionInfo, AgentTaskType, RoutingResult } from '@aster-code/shared';
 import AgentActivityFeed from '../components/AgentActivityFeed.tsx';
 import AgentPlanPanel from '../components/AgentPlanPanel.tsx';
+import AgentRoutingPreview from '../components/AgentRoutingPreview.tsx';
 import { getSelectedPromptId, setSelectedPromptId, getPromptById } from './SettingsScreen.tsx';
 
 interface ChatScreenProps {
@@ -27,6 +28,7 @@ export default function ChatScreen({ selectedModelId: _selectedModelId, runtimeC
   const [session, setSession] = useState<AgentSessionInfo | null>(null);
   const [plan, setPlan] = useState<AgentPlan | null>(null);
   const [taskType, setTaskType] = useState<AgentTaskType | null>(null);
+  const [routing, setRouting] = useState<RoutingResult | null>(null);
   const [phase, setPhase] = useState<'idle' | 'classifying' | 'plan-review' | 'executing' | 'done'>('idle');
 
   // Active system prompt — polled on visibility change for in-app tab switches
@@ -86,6 +88,7 @@ export default function ChatScreen({ selectedModelId: _selectedModelId, runtimeC
     setEvents([]);
     setPlan(null);
     setTaskType(null);
+    setRouting(null);
 
     try {
       // Phase 1: Create session
@@ -128,19 +131,20 @@ export default function ChatScreen({ selectedModelId: _selectedModelId, runtimeC
       const planData = await planRes.json();
       const generatedPlan: AgentPlan = planData.plan;
       const classification = planData.classification;
-      const selectedSkills: string[] = planData.selectedSkills;
+      const routingResult: RoutingResult = planData.routing;
 
       setPlan(generatedPlan);
       setTaskType(classification.taskType);
+      setRouting(routingResult);
       setPhase('plan-review');
 
-      // Show the plan in chat
+      // Show the routing analysis in chat
       setMessages(prev => [
         ...prev,
         {
           id: `assistant-plan-${Date.now()}`,
           role: 'assistant',
-          content: `✅ I've classified your task as **${classification.taskType}** and created an execution plan with ${generatedPlan.steps.length} steps. Selected skills: ${selectedSkills.join(', ')}.\n\n**Please review the plan in the panel below and approve or reject it.**`,
+          content: `✅ Detected **${routingResult.intents.length} intent(s)** and matched **${routingResult.selectedSkills.length} skill(s)**. ${routingResult.summary}\n\n**Please review the plan below and approve or reject it.**`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         }
       ]);
@@ -309,6 +313,13 @@ export default function ChatScreen({ selectedModelId: _selectedModelId, runtimeC
               </div>
             </div>
           ))}
+
+          {/* Inline routing preview */}
+          {routing && phase === 'plan-review' && (
+            <div className="max-w-3xl pl-12 mb-4">
+              <AgentRoutingPreview routing={routing} />
+            </div>
+          )}
 
           {/* Inline plan panel when in review phase */}
           {plan && phase === 'plan-review' && (

@@ -12,6 +12,17 @@ Status: SUCCESS — All builds pass cleanly
 4. `npm run build` — 0 errors
 5. `npm run runtime:build` — 0 errors
 
+## Automatic Agent Skill Routing
+- Added 14 intent categories: explain-code, build-feature, fix-bug, debug-build, improve-ui, dependency-task, write-tests, create-docs, refactor, setup-runtime, model-provider-task, mcp-tool-task, git-task, unknown
+- `intentClassifier.ts`: rule-based keyword matching classifier
+- `skillRouter.ts`: intent-to-skill mapping with confidence scores, risk levels, and permission requirements
+- `agentRouter.ts`: orchestrates full pipeline (classify → route → result)
+- `AgentRoutingPreview.tsx`: frontend component showing detected intents, selected skills, reasons, permissions, risk badges
+- Server plan endpoint returns `routing` field alongside plan
+- ChatScreen displays routing preview before plan panel
+- Risk levels: low/medium/high per skill candidate
+- Approval gating preserved: file-edit and command skills always require approval
+
 ## External Repo Research
 - Analyzed 29 repos from GitHub star list (12 cloned, 17 reviewed from metadata)
 - Created `docs/EXTERNAL_REPO_RESEARCH.md` — detailed analysis of all repos
