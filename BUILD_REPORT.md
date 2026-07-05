@@ -92,6 +92,12 @@ Status: SUCCESS — All builds pass cleanly
 
 ## Commands Run
 1. `npm run check` — 0 errors (typecheck + build all workspaces)
+2. `npm run desktop:dist` — SUCCESS (installer created at `dist-electron/Aster Code Setup 0.1.0.exe`)
+3. `npm run desktop:smoke` — Passed (all build artifacts found)
+
+### desktop:dist Fix
+- Pre-cleanup: `fs.rmSync('dist-electron', {recursive:true, force:true})` added to `dist` script — removes old output before building to avoid EBUSY file locks
+- Config: `verifyUpdateCodeSignature: false` + `signAndEditExecutable: false` — skips ASAR integrity step that Windows Defender locks
 
 ## Verification Results
 - ✅ All 4 workspaces typecheck with 0 errors

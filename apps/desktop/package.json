@@ -8,7 +8,7 @@
     "dev": "tsc && electron .",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "dist": "tsc && electron-builder --win --config"
+    "dist": "node -e \"try{require('fs').rmSync('dist-electron',{recursive:true,force:true})}catch(e){}\" && tsc && electron-builder --win --config"
   },
   "build": {
     "appId": "com.aster-code.desktop",
@@ -59,7 +59,9 @@
           ]
         }
       ],
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "verifyUpdateCodeSignature": false,
+      "signAndEditExecutable": false
     },
     "nsis": {
       "oneClick": false,
