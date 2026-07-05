@@ -5,6 +5,7 @@ import AgentActivityFeed from '../components/AgentActivityFeed.tsx';
 import AgentPlanPanel from '../components/AgentPlanPanel.tsx';
 import AgentRoutingPreview from '../components/AgentRoutingPreview.tsx';
 import { getSelectedPromptId, setSelectedPromptId, getPromptById } from './SettingsScreen.tsx';
+import { apiFetch } from '../api.ts';
 
 interface ChatScreenProps {
   selectedModelId: string;
@@ -94,7 +95,7 @@ export default function ChatScreen({ selectedModelId: _selectedModelId, runtimeC
       // Phase 1: Create session
       setPhase('classifying');
 
-      const sessionRes = await fetch('/api/agent/session', {
+      const sessionRes = await apiFetch('/api/agent/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ task: taskText }),
@@ -120,7 +121,7 @@ export default function ChatScreen({ selectedModelId: _selectedModelId, runtimeC
       ]);
 
       // Phase 2: Generate plan
-      const planRes = await fetch(`/api/agent/session/${newSession.id}/plan`, {
+      const planRes = await apiFetch(`/api/agent/session/${newSession.id}/plan`, {
         method: 'POST',
       });
 
@@ -182,7 +183,7 @@ export default function ChatScreen({ selectedModelId: _selectedModelId, runtimeC
     ]);
 
     try {
-      const approveRes = await fetch(`/api/agent/session/${session.id}/approve`, {
+      const approveRes = await apiFetch(`/api/agent/session/${session.id}/approve`, {
         method: 'POST',
       });
 
@@ -230,7 +231,7 @@ export default function ChatScreen({ selectedModelId: _selectedModelId, runtimeC
     setIsProcessing(true);
 
     try {
-      await fetch(`/api/agent/session/${session.id}/reject`, {
+      await apiFetch(`/api/agent/session/${session.id}/reject`, {
         method: 'POST',
       });
     } catch (err) {

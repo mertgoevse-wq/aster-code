@@ -8,6 +8,7 @@ import ModelsScreen from './screens/ModelsScreen.tsx';
 import SkillsScreen from './screens/SkillsScreen.tsx';
 import SettingsScreen from './screens/SettingsScreen.tsx';
 import { ModelMetadata, ProviderInfo, ProviderConfigs } from '@aster-code/shared';
+import { apiFetch } from './api.ts';
 
 interface CacheStatus {
   isRefreshing: boolean;
@@ -38,10 +39,13 @@ export default function App() {
   // Cache status
   const [cacheStatus, setCacheStatus] = useState<CacheStatus | null>(null);
 
+  // Track Electron runtime status
+  const [electronRuntimeState, setElectronRuntimeState] = useState<'starting' | 'online' | 'offline' | 'error' | null>(null);
+
   // Check backend server connection
   const checkHealth = async () => {
     try {
-      const res = await fetch('/api/health');
+      const res = await apiFetch('/api/health');
       if (res.ok) {
         setRuntimeConnected(true);
         return true;
@@ -54,8 +58,8 @@ export default function App() {
   const fetchRegistryData = async () => {
     try {
       const [modelsRes, providersRes] = await Promise.all([
-        fetch('/api/models'),
-        fetch('/api/providers')
+        apiFetch('/api/models'),
+        apiFetch('/api/providers')
       ]);
 
       if (modelsRes.ok && providersRes.ok) {
@@ -78,7 +82,7 @@ export default function App() {
 
   const fetchCacheStatus = async () => {
     try {
-      const res = await fetch('/api/models/status');
+      const res = await apiFetch('/api/models/status');
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.status) {
@@ -98,7 +102,7 @@ export default function App() {
     if (!runtimeConnected) return;
     setIsRefreshing(true);
     try {
-      const res = await fetch('/api/models/refresh', { method: 'POST' });
+      const res = await apiFetch('/api/models/refresh', { method: 'POST' });
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
@@ -119,7 +123,7 @@ export default function App() {
 
   const handleUpdateConfigs = async (configs: ProviderConfigs): Promise<boolean> => {
     try {
-      const res = await fetch('/api/config', {
+      const res = await apiFetch('/api/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(configs)
@@ -146,6 +150,26 @@ export default function App() {
     setAutoRefreshIntervalS(seconds);
     localStorage.setItem('aster_auto_refresh_interval', String(seconds));
   };
+
+  // Listen for Electron runtime status changes
+  useEffect(() => {
+    const desktop = (window as any).asterDesktop;
+    if (!desktop?.onRuntimeStatusChange) return;
+
+    // Get initial status
+    desktop.getRuntimeStatus().then((status: any) => {
+      setElectronRuntimeState(status.state);
+      if (status.state === 'online') setRuntimeConnected(true);
+    });
+
+    const unsubscribe = desktop.onRuntimeStatusChange((status: any) => {
+      setElectronRuntimeState(status.state);
+      if (status.state === 'online') setRuntimeConnected(true);
+      if (status.state === 'offline' || status.state === 'error') setRuntimeConnected(false);
+    });
+
+    return unsubscribe;
+  }, []);
 
   // Monitor connection states
   useEffect(() => {
@@ -244,10 +268,9 @@ export default function App() {
       }
       statusbar={
         <div className="h-7 border-t border-ivory-200 bg-ivory-100/80 backdrop-blur-md flex items-center justify-between px-4 shrink-0">
-          <div className="flex items-center gap-3 text-[10px] text-ivory-500 font-mono">
-            <span className="flex items-center gap-1">
-              <span className={`w-1.5 h-1.5 rounded-full ${runtimeConnected ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-              {runtimeConnected ? 'localhost:3001' : 'offline'}
+          <div className="flex items-center gap-3 text-[10px] text-ivory-500 font-mono">                <span className="flex items-center gap-1">
+              <span className={`w-1.5 h-1.5 rounded-full ${electronRuntimeState === 'starting' ? 'bg-blue-400 animate-pulse' : runtimeConnected ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+              {electronRuntimeState === 'starting' ? 'runtime starting...' : runtimeConnected ? 'localhost:3001' : 'offline'}
             </span>
             <span className="text-ivory-300">|</span>
             <span>{models.length} models</span>
@@ -255,7 +278,20 @@ export default function App() {
             <span>local-first</span>
           </div>
           <div className="flex items-center gap-2 text-[9px] text-ivory-400 font-sans">
-            <span className="bg-clay/10 text-clay px-1.5 py-0.5 rounded border border-clay/20 font-semibold">Desktop Dev Build</span>
+            {electronRuntimeState && (
+              <span className={`px-1.5 py-0.5 rounded border font-semibold ${
+                electronRuntimeState === 'starting' ? 'bg-blue-50 text-blue-600 border-blue-200' :
+                electronRuntimeState === 'online' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
+                electronRuntimeState === 'error' ? 'bg-rose-50 text-rose-600 border-rose-200' :
+                'bg-ivory-100 text-ivory-500 border-ivory-200'
+              }`}>
+                {electronRuntimeState === 'starting' && '⚡ Starting Runtime'}
+                {electronRuntimeState === 'online' && '✓ Runtime Online'}
+                {electronRuntimeState === 'error' && '✕ Runtime Error'}
+                {electronRuntimeState === 'offline' && 'Runtime Offline'}
+              </span>
+            )}
+            <span className="bg-clay/10 text-clay px-1.5 py-0.5 rounded border border-clay/20 font-semibold">{electronRuntimeState ? 'Desktop Build' : 'Desktop Dev Build'}</span>
           </div>
         </div>
       }

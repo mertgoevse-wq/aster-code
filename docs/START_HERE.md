@@ -45,10 +45,10 @@ One command starts **all three servers**:
 When the app opens:
 
 1. **Sidebar** — Click through Chat Studio, Workbench, Model Registry, Agent Skills, Settings
-2. **Status bar** — Bottom shows runtime URL, model count, "Desktop Dev Build"
+2. **Status bar** — Bottom shows runtime status badge (starting/online/offline/error), URL, model count
 3. **Chat** — Type a task (e.g. "explain this project") and verify a plan is generated
 4. **Models** — Check if provider models are listed
-5. **Settings** — Toggle providers, edit system prompts
+5. **Settings** — Toggle providers, edit system prompts, check Runtime Server panel
 
 > If the Electron window doesn't open, just use `http://localhost:5173` in your browser — the web app works without Electron.
 
@@ -58,7 +58,7 @@ When the app opens:
 # Build everything for distribution
 npm run app:build
 
-# Package Windows installer
+# Package Windows installer (builds web + runtime + desktop)
 npm run desktop:dist
 ```
 
@@ -70,15 +70,17 @@ Output: `apps/desktop/dist-electron/Aster Code Setup 0.1.0.exe`
 |---------|-----|
 | **Port in use** | Kill the process: `npx kill-port 3001 5173` |
 | **Blank Electron window** | Wait ~5s, Vite may not be ready yet |
-| **Runtime "offline"** | Check `http://localhost:3001/health` returns OK |
+| **Runtime "offline"** | Check `http://localhost:3001/health` returns OK, or restart from Settings |
 | **Missing modules** | Run `npm install` from project root |
 | **Windows blocks installer** | Click "More info" → "Run anyway" (unsigned app) |
+| **Runtime logs** | View in Settings → Runtime Server → Runtime Logs |
 
 ## Key Docs
 
 | File | Covers |
 |------|--------|
 | `docs/LOCAL_TESTING.md` | Smoke test checklist |
-| `docs/DESKTOP_APP.md` | Electron setup and packaging |
+| `docs/DESKTOP_APP.md` | Electron setup, packaging, runtime management |
+| `docs/DESKTOP_RUNTIME.md` | Runtime IPC API, lifecycle, health monitoring |
 | `docs/AGENT_ARCHITECTURE.md` | Agent loop and routing |
 | `docs/SECURITY.md` | Security model |

@@ -8,23 +8,55 @@
     "dev": "tsc && electron .",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "dist": "electron-builder --win --config"
+    "dist": "tsc && electron-builder --win --config"
   },
   "build": {
     "appId": "com.aster-code.desktop",
     "productName": "Aster Code",
     "directories": {
-      "output": "dist-electron"
+      "output": "dist-electron",
+      "buildResources": "assets"
     },
     "files": [
       "dist/**/*",
-      "../web/dist/**/*"
+      "!dist/**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": "../web/dist",
+        "to": "web/dist",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../runtime/dist",
+        "to": "runtime/dist",
+        "filter": [
+          "**/*",
+          "!**/*.map"
+        ]
+      },
+      {
+        "from": "../runtime/package.json",
+        "to": "runtime/package.json"
+      },
+      {
+        "from": "../runtime/node_modules",
+        "to": "runtime/node_modules",
+        "filter": [
+          "**/*",
+          "!**/*.map"
+        ]
+      }
     ],
     "win": {
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "assets/icon.ico"
@@ -34,8 +66,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
-    },
-    "extraResources": []
+    }
   },
   "dependencies": {
     "electron-log": "^5.1.7"

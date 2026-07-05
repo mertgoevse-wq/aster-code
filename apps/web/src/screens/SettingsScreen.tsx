@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Key, Database, Trash2, Edit3, AlertCircle, ShieldAlert, Github, Chrome,
-  ToggleLeft, ToggleRight, Copy, Download, Upload, X, Tag, Star, FileJson, Shield
+  ToggleLeft, ToggleRight, Copy, Download, Upload, X, Tag, Star, FileJson, Shield,
+  Terminal, RefreshCw, Server, PanelBottom, AlertTriangle
 } from 'lucide-react';
 import { SystemPromptTemplate, ProviderConfigs } from '@aster-code/shared';
+import { apiFetch } from '../api.ts';
 
 const PROMPTS_STORAGE_KEY = 'aster_system_prompts';
 const SELECTED_PROMPT_KEY = 'aster_selected_prompt_id';
@@ -120,6 +122,66 @@ export default function SettingsScreen({ runtimeConnected, onUpdateConfigs }: Se
   const [showImport, setShowImport] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Runtime management state
+  const [runtimeStatus, setRuntimeStatus] = useState<{ state: string; pid: number | null; url: string } | null>(null);
+  const [runtimeLogs, setRuntimeLogs] = useState<string[]>([]);
+  const [showRuntimeLogs, setShowRuntimeLogs] = useState(false);
+  const [isRestarting, setIsRestarting] = useState(false);
+  const logsEndRef = useRef<HTMLDivElement>(null);
+
+  // Fetch runtime status from Electron
+  const refreshRuntimeStatus = async () => {
+    const desktop = (window as any).asterDesktop;
+    if (!desktop?.getRuntimeStatus) return;
+    try {
+      const status = await desktop.getRuntimeStatus();
+      setRuntimeStatus(status);
+    } catch { /* ignore */ }
+  };
+
+  const refreshRuntimeLogs = async () => {
+    const desktop = (window as any).asterDesktop;
+    if (!desktop?.getRuntimeLogs) return;
+    try {
+      const logs = await desktop.getRuntimeLogs();
+      setRuntimeLogs(logs);
+    } catch { /* ignore */ }
+  };
+
+  const handleRestartRuntime = async () => {
+    const desktop = (window as any).asterDesktop;
+    if (!desktop?.restartRuntime) return;
+    setIsRestarting(true);
+    try {
+      const status = await desktop.restartRuntime();
+      setRuntimeStatus(status);
+      setTimeout(() => refreshRuntimeLogs(), 1000);
+    } catch { /* ignore */ }
+    setIsRestarting(false);
+  };
+
+  // Listen for runtime status changes
+  useEffect(() => {
+    const desktop = (window as any).asterDesktop;
+    if (!desktop?.onRuntimeStatusChange) return;
+
+    refreshRuntimeStatus();
+    refreshRuntimeLogs();
+
+    const unsubscribe = desktop.onRuntimeStatusChange((status: any) => {
+      setRuntimeStatus(status);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  // Auto-scroll logs
+  useEffect(() => {
+    if (showRuntimeLogs) {
+      logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [runtimeLogs, showRuntimeLogs]);
+
   // Load provider configs on mount
   useEffect(() => {
     const loadData = async () => {
@@ -130,7 +192,7 @@ export default function SettingsScreen({ runtimeConnected, onUpdateConfigs }: Se
       }
       if (runtimeConnected) {
         try {
-          const res = await fetch('/api/models/status');
+          const res = await apiFetch('/api/models/status');
           if (res.ok) {
             const data = await res.json();
             if (data.success && data.status?.configs) {
@@ -339,6 +401,109 @@ export default function SettingsScreen({ runtimeConnected, onUpdateConfigs }: Se
       </div>
 
       <div className="grid grid-cols-2 gap-8 items-start">
+        {/* NEW COLUMN: Runtime Management */}
+        <div className="bg-white border border-ivory-200 rounded-xl p-6 shadow-soft space-y-6">
+          <div className="flex justify-between items-center border-b border-ivory-100 pb-3">
+            <h2 className="text-sm font-bold text-ivory-800 flex items-center gap-2">
+              <Server className="w-4.5 h-4.5 text-[#866854]" />
+              Runtime Server
+            </h2>
+            <span className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+              !runtimeStatus ? '' :
+              runtimeStatus.state === 'online' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+              runtimeStatus.state === 'starting' ? 'bg-blue-50 text-blue-600 border-blue-200' :
+              runtimeStatus.state === 'error' ? 'bg-rose-50 text-rose-600 border-rose-200' :
+              'bg-amber-50 text-amber-600 border-amber-200'
+            }`}>
+              {runtimeStatus && <span className={`w-1.5 h-1.5 rounded-full mr-1 ${
+                runtimeStatus.state === 'online' ? 'bg-emerald-500' :
+                runtimeStatus.state === 'starting' ? 'bg-blue-400 animate-pulse' :
+                runtimeStatus.state === 'error' ? 'bg-rose-500' :
+                'bg-amber-500'
+              }`} />}
+              {runtimeStatus?.state || 'Unknown'}
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {/* Status info */}
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="bg-ivory-50 rounded-lg p-3 border border-ivory-100">
+                <span className="text-[10px] text-ivory-500 font-medium">URL</span>
+                <p className="font-mono text-xs text-ivory-800 mt-0.5">{runtimeStatus?.url || 'http://localhost:3001'}</p>
+              </div>
+              <div className="bg-ivory-50 rounded-lg p-3 border border-ivory-100">
+                <span className="text-[10px] text-ivory-500 font-medium">PID</span>
+                <p className="font-mono text-xs text-ivory-800 mt-0.5">{runtimeStatus?.pid || '—'}</p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={handleRestartRuntime}
+                disabled={isRestarting}
+                className="flex items-center gap-1.5 text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRestarting ? 'animate-spin' : ''}`} />
+                {isRestarting ? 'Restarting...' : 'Restart Runtime'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowRuntimeLogs(!showRuntimeLogs);
+                  if (!showRuntimeLogs) refreshRuntimeLogs();
+                }}
+                className="flex items-center gap-1.5 text-xs font-semibold bg-ivory-50 text-ivory-600 border border-ivory-200 hover:bg-ivory-100 px-3 py-1.5 rounded-lg transition-all"
+              >
+                <Terminal className="w-3.5 h-3.5" />
+                {showRuntimeLogs ? 'Hide Logs' : 'Runtime Logs'}
+              </button>
+              <button
+                onClick={refreshRuntimeLogs}
+                className="flex items-center gap-1.5 text-xs font-semibold bg-ivory-50 text-ivory-600 border border-ivory-200 hover:bg-ivory-100 px-3 py-1.5 rounded-lg transition-all"
+                title="Refresh logs"
+              >
+                <RefreshCw className="w-3 h-3" />
+              </button>
+            </div>
+
+            {/* Runtime logs panel */}
+            {showRuntimeLogs && (
+              <div className="bg-[#1E1E1E] rounded-xl border border-ivory-200 overflow-hidden">
+                <div className="h-8 bg-[#252525] border-b border-[#333] flex items-center px-4 text-[10px] font-semibold text-ivory-400">
+                  <Terminal className="w-3 h-3 mr-1.5" />
+                  Runtime Logs
+                  <span className="ml-auto text-[9px] text-ivory-500">{runtimeLogs.length} lines</span>
+                </div>
+                <div className="h-48 overflow-y-auto p-3 font-mono text-[10px] leading-relaxed text-emerald-400 space-y-0.5">
+                  {runtimeLogs.length === 0 ? (
+                    <div className="text-ivory-500 italic flex items-center gap-1">
+                      <PanelBottom className="w-3 h-3" />
+                      No logs yet. Runtime will start automatically in the desktop app.
+                    </div>
+                  ) : (
+                    runtimeLogs.map((line, i) => (
+                      <div key={i} className="whitespace-pre-wrap">{line}</div>
+                    ))
+                  )}
+                  <div ref={logsEndRef} />
+                </div>
+              </div>
+            )}
+
+            {/* Info note */}
+            <div className="text-[10px] leading-relaxed text-ivory-400 bg-ivory-50/50 p-3 border border-ivory-100 rounded-lg flex items-start gap-2">
+              <AlertTriangle className="w-3.5 h-3.5 text-ivory-400 shrink-0 mt-0.5" />
+              <span>
+                The runtime server manages model providers, agent sessions, workspace files, and MCP gateway.
+                It runs on <code className="bg-ivory-100 px-1 rounded text-[9px]">localhost:3001</code>.
+                In the desktop app, it starts automatically. In the browser, start it with <code className="bg-ivory-100 px-1 rounded text-[9px]">npm run dev:runtime</code>.
+              </span>
+            </div>
+          </div>
+        </div>
+
+
         {/* Left Column: API Keys, Local Endpoints, Auth */}
         <div className="bg-white border border-ivory-200 rounded-xl p-6 shadow-soft space-y-6">
           <div className="flex justify-between items-center border-b border-ivory-100 pb-3">

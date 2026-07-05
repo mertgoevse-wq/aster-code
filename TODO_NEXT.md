@@ -1,13 +1,48 @@
-# Next Steps — After Agent Loop MVP
+# Next Steps — After Desktop Packaging + Runtime Connectivity
 
 Date: 2026-07-05
-Based on: Agent Loop MVP implementation
+Based on: Desktop packaging and runtime connectivity implementation
+
+---
+
+## ✅ Completed: Desktop Packaging + Runtime Connectivity
+
+### API Connectivity Fix
+- Created `apps/web/src/api.ts` — API base URL resolver (Electron: `http://localhost:3001`, browser: Vite proxy)
+- Updated all 6 frontend files to use `apiFetch()` / `apiEventSource()` wrappers
+- No more fragile `file://` relative API paths in production
+
+### Runtime Auto-Start
+- Electron main process detects/connects to runtime at `localhost:3001`
+- If not running, spawns runtime as child process (tsx in dev, node in production)
+- Health monitoring every 5 seconds
+- Captures stdout/stderr logs
+- Graceful shutdown on app exit
+
+### Safe Preload IPC
+- `window.asterDesktop.getRuntimeStatus()`
+- `window.asterDesktop.restartRuntime()`
+- `window.asterDesktop.getRuntimeLogs()`
+- `window.asterDesktop.onRuntimeStatusChange()`
+- No raw shell commands, no secrets, no file access
+
+### UI Runtime Controls
+- Status bar shows runtime state with colored badges
+- Settings → Runtime Server panel: status info, restart button, logs viewer
+
+### Packaging
+- electron-builder includes web dist, runtime dist, runtime deps as extraResources
+- Windows NSIS installer target preserved
+
+### Documentation
+- `docs/DESKTOP_APP.md` — Updated with runtime management
+- `docs/DESKTOP_RUNTIME.md` — New: runtime IPC API, lifecycle docs
+- `docs/START_HERE.md` — Updated
+- `README.md` — Updated
 
 ---
 
 ## Immediate Priority: Phase 3 (Real Execution + LLM)
-
-The agent loop architecture is in place but execution is simulated. The next prompts should focus on connecting real capabilities.
 
 ### Step 1: Real LLM Completion Endpoint
 - **File**: `apps/runtime/src/server.ts`, new file `apps/runtime/src/agent/completer.ts`
@@ -36,94 +71,51 @@ The agent loop architecture is in place but execution is simulated. The next pro
 
 ## Medium Priority
 
-### Step 5: Fix Production API Proxy
-- **File**: `apps/desktop/src/main.ts`, `apps/web/vite.config.ts`
-- **Action**: Either have Electron's main process start the runtime as a child process, or configure the web build to detect Electron and use `http://localhost:3001` directly for API calls instead of `/api/*` relative paths.
+### Step 5: Optimize Installer Size
+- Current runtime node_modules adds ~50MB
+- Consider bundling runtime with esbuild or using a single-entry approach
+- Or add `--production` only node_modules
 
-### Step 6: Implement Real OAuth Flow
-- **File**: `apps/runtime/src/auth/githubOAuth.ts`, `googleOAuth.ts`
-- **Action**: Implement token exchange (code → access_token), user profile fetch, session creation
-- Add CSRF state validation (store generated states, verify on callback)
-- Add PKCE support for web/client-side flows
+### Step 6: Custom App Icon
+- Create Aster Code icon (SVG/PNG/ICO)
+- Configure electron-builder to use it
+
+### Step 7: macOS/Linux Installers
+- Add `mac` and `linux` targets to electron-builder config
+- Test on macOS and Linux
+
+### Step 8: Implement Real OAuth Flow
+- Token exchange (code → access_token), user profile fetch, session creation
 - Enable login buttons in SettingsScreen when OAuth is configured
 
-### Step 6: Real MCP Execution
-- **File**: `apps/runtime/src/mcp/gateway.ts`
-- **Action**: Replace mock tool generation with real MCP JSON-RPC tool discovery
+### Step 9: Real MCP Execution
+- Replace mock tool generation with real MCP JSON-RPC tool discovery
 - Implement stdio process management for local MCP servers
-- Add real tool invocation routing through the gateway
-- Add persistent audit log storage (SQLite or file-based)
 
-### Step 6: Session Persistence
+### Step 10: Session Persistence
 - Replace in-memory `sessionStore` with file-based or SQLite storage
-- Add session list endpoint (`GET /agent/sessions`)
 
-### Step 6: Monaco Editor Integration
+### Step 11: Monaco Editor Integration
 - Replace `<textarea>` in WorkbenchScreen with Monaco Editor
-- Add syntax highlighting, autocomplete, diff view
 
-### Step 7: Fix npm Vulnerabilities
+### Step 12: Fix npm Vulnerabilities
 - Run `npm audit fix` to address transitive dependency issues
 
-### Step 8: Add Unit Tests
-- Test the agent planner (classification, skill selection)
-- Test the session store (CRUD operations)
-- Test the policies engine (permission checks)
-- Test the skills registry and runner
+### Step 13: Add Unit Tests
+- Test the agent planner, session store, policies engine, skills registry
 
 ---
 
-## Completed: Agent Skill Routing ✅
-- `apps/runtime/src/agent/intentClassifier.ts` — 14-intent classifier
-- `apps/runtime/src/agent/skillRouter.ts` — intent-to-skill mapping with confidence/risk
-- `apps/runtime/src/agent/agentRouter.ts` — full routing pipeline
-- `apps/web/src/components/AgentRoutingPreview.tsx` — routing visualization
-- ChatScreen shows routing preview before plan
+## Previously Completed
 
-## Completed: External Repo Research ✅
-- 29 repos analyzed, 12 cloned shallowly into `_research/import-candidates/`
-- `docs/EXTERNAL_REPO_RESEARCH.md`, `SKILL_CANDIDATE_MATRIX.md`, `REPO_LICENSE_REVIEW.md`
-- 8 placeholder skill candidates added to registry (all `inactive`)
-- See `docs/SKILL_CANDIDATE_MATRIX.md` for Tier 1 priority candidates
-
-## Completed: Dev Workflow ✅
-- `app:dev` uses colored concurrent output (RT/WEB/DSK prefixes)
-- `app:build` includes typecheck + all builds
-- `scripts/dev-start.mjs` — welcome banner wrapper
-- `docs/START_HERE.md` — 4-step beginner guide
-
-## Completed: Electron Desktop App ✅
-- `apps/desktop/` workspace with Electron + electron-builder
-- Main process, preload, window factory — secure defaults
-- Root scripts: desktop:dev, desktop:build, desktop:dist, app:dev, app:build
-- `docs/DESKTOP_APP.md` — setup, scripts, troubleshooting
-- Known MVP limits: no production API proxy, default icon
-
-## Completed: UI Foundation Fix ✅
-- **Root cause:** Missing `postcss.config.js` — Tailwind never processed CSS directives
-- **Fix:** Created PostCSS config, rewrote theme.css (CSS reset + Tailwind directives only, no utility mirroring)
-- Added dev status bar to AppShell/App.tsx
-
-## Completed: Auth Scaffolding ✅
-- `apps/runtime/src/auth/types.ts` — Auth types
-- `apps/runtime/src/auth/oauthConfig.ts` — GitHub + Google OAuth config
-- `apps/runtime/src/auth/sessionStore.ts` — In-memory auth session store
-- `apps/runtime/src/auth/githubOAuth.ts` — GitHub OAuth handler (placeholder)
-- `apps/runtime/src/auth/googleOAuth.ts` — Google OAuth handler (placeholder)
-- 6 new API endpoints: status, logout, github/start, google/start, callback
-- Frontend SettingsScreen: auth section with disabled login buttons, local-first indicator
-- `docs/AUTH_ARCHITECTURE.md` — Full architecture documentation
-
-## Completed: MCP Gateway Scaffold ✅
-- `apps/runtime/src/mcp/types.ts` — Internal MCP types
-- `apps/runtime/src/mcp/policies.ts` — Access control, categorization, risk assessment, audit
-- `apps/runtime/src/mcp/registry.ts` — Server config registry with CRUD, 4 default servers (all disabled)
-- `apps/runtime/src/mcp/gateway.ts` — Tool discovery filtering, governed invocation, mock tool generation
-- `apps/runtime/src/mcp/mcpoClient.ts` — mcpo OpenAPI bridge placeholder
-- 8 new API endpoints on server (server CRUD + discovery + audit)
-- `docs/MCP_GATEWAY.md` and `docs/MCP_SECURITY_POLICY.md`
-
-## Completed: Local Test Workflow ✅
-- `npm run check` runs typecheck + build + runtime:build
-- `npm run runtime:dev` starts the runtime with hot reload
-- `docs/LOCAL_TESTING.md` has Windows PowerShell instructions and smoke test checklist
+- ✅ Agent skill routing (intent classifier, skill router, routing preview)
+- ✅ External repo research (29 repos analyzed)
+- ✅ Dev workflow (app:dev colored output, scripts/dev-start.mjs)
+- ✅ Auth scaffolding (GitHub/Google OAuth placeholders)
+- ✅ MCP gateway scaffolding (registry, policies, audit)
+- ✅ Local test workflow (npm run check, docs/LOCAL_TESTING.md)
+- ✅ Electron desktop app shell
+- ✅ UI foundation fix (PostCSS, theme.css rewrite)
+- ✅ System prompt library (CRUD, tags, export/import)
+- ✅ Model picker UX (provider filter, detail popover, auto-refresh)
+- ✅ Workbench MVP polish (multi-tab editor, status bar, file tree, preview)

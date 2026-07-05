@@ -6,6 +6,7 @@ import {
   AlertTriangle, Square, Loader2, PanelBottom
 } from 'lucide-react';
 import { FileNode } from '@aster-code/shared';
+import { apiFetch, apiEventSource } from '../api.ts';
 
 interface WorkbenchScreenProps {
   runtimeConnected: boolean;
@@ -63,7 +64,7 @@ export default function WorkbenchScreen({ runtimeConnected }: WorkbenchScreenPro
     if (!runtimeConnected) return;
     setFilesLoading(true);
     try {
-      const res = await fetch('/api/workspace/files');
+      const res = await apiFetch('/api/workspace/files');
       if (res.ok) {
         const data = await res.json();
         if (data.success) setFiles(data.files);
@@ -80,7 +81,7 @@ export default function WorkbenchScreen({ runtimeConnected }: WorkbenchScreenPro
       return;
     }
     try {
-      const res = await fetch(`/api/workspace/file?path=${encodeURIComponent(filePath)}`);
+      const res = await apiFetch(`/api/workspace/file?path=${encodeURIComponent(filePath)}`);
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
@@ -115,7 +116,7 @@ export default function WorkbenchScreen({ runtimeConnected }: WorkbenchScreenPro
     const tab = tabs.find(t => t.path === activeTabPath);
     if (!tab) return;
     try {
-      const res = await fetch('/api/workspace/file', {
+      const res = await apiFetch('/api/workspace/file', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path: activeTabPath, content: tab.content })
@@ -157,7 +158,7 @@ export default function WorkbenchScreen({ runtimeConnected }: WorkbenchScreenPro
   const handleDeleteItem = async (filePath: string) => {
     if (!window.confirm(`Delete ${filePath}?`)) return;
     try {
-      const res = await fetch(`/api/workspace/file?path=${encodeURIComponent(filePath)}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/workspace/file?path=${encodeURIComponent(filePath)}`, { method: 'DELETE' });
       if (res.ok) {
         setLogs(prev => [...prev, `✓ Deleted ${filePath}\n`]);
         closeTab(filePath, true);
@@ -169,7 +170,7 @@ export default function WorkbenchScreen({ runtimeConnected }: WorkbenchScreenPro
 
   const runCommand = async (command: string) => {
     try {
-      const res = await fetch('/api/commands/run', {
+      const res = await apiFetch('/api/commands/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ command })
@@ -184,7 +185,7 @@ export default function WorkbenchScreen({ runtimeConnected }: WorkbenchScreenPro
   };
 
   const stopCommand = async () => {
-    try { await fetch('/api/commands/stop', { method: 'POST' }); } catch { /* ignore */ }
+    try { await apiFetch('/api/commands/stop', { method: 'POST' }); } catch { /* ignore */ }
   };
 
   // --- SSE ---
@@ -193,7 +194,7 @@ export default function WorkbenchScreen({ runtimeConnected }: WorkbenchScreenPro
     if (!runtimeConnected) return;
     loadFiles();
 
-    const es = new EventSource('/api/events');
+    const es = apiEventSource('/api/events');
     es.addEventListener('log', (e: MessageEvent) => {
       const data = JSON.parse(e.data);
       setLogs(prev => [...prev, data.text]);

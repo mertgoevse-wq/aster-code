@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Award, Shield, Lock, RefreshCw, AlertTriangle } from 'lucide-react';
 import { SkillDefinition } from '@aster-code/shared';
+import { apiFetch } from '../api.ts';
 
 export default function SkillsScreen() {
   const [skills, setSkills] = useState<SkillDefinition[]>([]);
@@ -12,7 +13,7 @@ export default function SkillsScreen() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/agent/skills');
+      const res = await apiFetch('/api/agent/skills');
       if (!res.ok) {
         throw new Error(`Failed to load skills: ${res.status}`);
       }
@@ -45,7 +46,7 @@ export default function SkillsScreen() {
 
     // Sync with backend
     try {
-      await fetch(`/api/agent/skills/${id}`, {
+      await apiFetch(`/api/agent/skills/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ executionMode: newMode }),
@@ -68,7 +69,7 @@ export default function SkillsScreen() {
 
     // Sync with backend
     try {
-      await fetch(`/api/agent/skills/${id}`, {
+      await apiFetch(`/api/agent/skills/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
