@@ -1,27 +1,24 @@
-# Aster Code Model Registry Build Report
+# Aster Code Workbench MVP Build Report
 
 Date: 2026-07-05
 Status: SUCCESS
 
-All workspace components compile successfully with zero TypeScript compiler errors.
+All workspace components compile successfully with zero TypeScript compilation warnings or errors.
 
 ## Commands Run
 1. `npm run typecheck`
-   - Outcome: Checked type safety across `@aster-code/shared`, `@aster-code/runtime`, and `@aster-code/web` workspaces. Completed with 0 errors.
+   - Outcome: Checked type safety across `@aster-code/shared`, `@aster-code/runtime`, and `@aster-code/web` workspaces. Completed successfully with 0 errors.
 2. `npm run build`
-   - Outcome: Built production distribution bundles. Vite React assets chunks emitted successfully.
+   - Outcome: Built production React frontend assets bundle chunks successfully in 3.72s.
 3. `npm run runtime:build`
-   - Outcome: Emitted compiled ESM server files inside `apps/runtime/dist/` with 0 issues.
+   - Outcome: Compiled Express backend server assets into `dist/` successfully with 0 errors.
 
 ## Verification Results
-- **Shared types** (`@aster-code/shared`): Re-emitted successfully to support `raw` model payload structures and provider settings configuration definitions.
-- **Runtime backend API** (`@aster-code/runtime`): Builds and compiles successfully. Real adapters (Ollama, OpenRouter, Nvidia NIM, LM Studio, and OpenAI Compatible) are functional.
-- **Frontend web client** (`@aster-code/web`): Compiles successfully. The settings screen toggles and dropdown inspectors are fully integrated.
-
-## Known Limitations
-- Real chat completion / generation is not implemented yet (held for Phase 2).
-- Local storage does not save API keys for client-side security. They are only sent in-memory to the runtime node cache.
+- **Shared types** (`@aster-code/shared`): Re-emitted successfully to support `FileNode` file explorers, command execution statuses, and SSE status updates.
+- **Runtime backend API** (`@aster-code/runtime`): Builds and compiles successfully. File sandbox workspace helpers, SSE streamers, and safe cmd runners are active.
+- **Frontend web client** (`@aster-code/web`): Compiles successfully. The Workbench explorer view is functional and connected to the live `/api/events` event broadcaster.
 
 ## Next Recommended Step
-- Implement sandbox workspace filesystem routes (`GET /api/workspace`) and wire up Monaco editor cells to modify files.
-
+Integrate safe AI agent completions:
+1. Connect the Chat Studio screen prompts to query target LLMs via the Model Registry.
+2. Implement file edit capabilities by generating plans and prompting for approvals.

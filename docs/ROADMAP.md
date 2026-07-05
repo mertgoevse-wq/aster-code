@@ -15,10 +15,11 @@
 - [ ] Implement robust error checks and fallback strategies.
 
 ## Phase 3: Workspace Files & Preview Sandbox
-- [ ] Implement directory indexing using Node `fs` APIs in `/api/workspace`.
+- [x] Implement directory indexing using Node `fs` APIs in `/api/workspace`.
+- [x] Implement command execution runner supporting streaming logs via Server-Sent Events (SSE).
+- [x] Run Vite previews inside a virtual iframe to render UI updates in real-time.
 - [ ] Mount Monaco Editor in `apps/web` connected via web sockets to modify real files.
-- [ ] Implement command execution runner supporting streaming logs via Server-Sent Events (SSE).
-- [ ] Run Vite previews inside a virtual iframe to render UI updates in real-time.
+
 
 ## Phase 4: Native Android Client Execution
 - [ ] Design a lightweight webview wrapper or Cordova/Capacitor framework to package Aster Code UI as an Android app.

@@ -77,3 +77,22 @@ export interface ProviderConfigs {
   anthropicApiKey?: string;
 }
 
+export interface FileNode {
+  name: string;
+  path: string;
+  type: 'file' | 'directory';
+  children?: FileNode[];
+}
+
+export interface CommandStatusEvent {
+  status: 'idle' | 'running' | 'success' | 'failed';
+  command?: string;
+  exitCode?: number | null;
+  error?: string;
+}
+
+export interface PreviewStatusEvent {
+  port?: number | null;
+  url?: string | null;
+  available: boolean;
+}

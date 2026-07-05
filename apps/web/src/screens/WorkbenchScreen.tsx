@@ -1,155 +1,530 @@
-import { useState } from 'react';
-import { Folder, File, Terminal as TermIcon, Monitor, Eye, FileText, ChevronDown } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Folder, File, Terminal as TermIcon, Monitor, Play, Eye, FileText, ChevronDown, ChevronRight, Save, Trash2, Plus, RefreshCw, XCircle } from 'lucide-react';
+import { FileNode } from '@aster-code/shared';
 
 interface WorkbenchScreenProps {
   runtimeConnected: boolean;
 }
 
 export default function WorkbenchScreen({ runtimeConnected }: WorkbenchScreenProps) {
-  const [activeFile, setActiveFile] = useState('src/App.tsx');
+  const [files, setFiles] = useState<FileNode[]>([]);
+  const [activeFilePath, setActiveFilePath] = useState<string | null>(null);
+  const [editorContent, setEditorContent] = useState<string>('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+  const [logs, setLogs] = useState<string[]>([]);
+  const [commandStatus, setCommandStatus] = useState<'idle' | 'running' | 'success' | 'failed'>('idle');
+  const [runningCommand, setRunningCommand] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  
+  // File expansion state
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
 
-  const fileTree = [
-    { name: 'apps', type: 'dir', path: 'apps' },
-    { name: 'web', type: 'dir', path: 'apps/web' },
-    { name: 'src', type: 'dir', path: 'src', indent: 1 },
-    { name: 'components', type: 'dir', path: 'src/components', indent: 2 },
-    { name: 'AppShell.tsx', type: 'file', path: 'src/components/AppShell.tsx', indent: 3 },
-    { name: 'Sidebar.tsx', type: 'file', path: 'src/components/Sidebar.tsx', indent: 3 },
-    { name: 'App.tsx', type: 'file', path: 'src/App.tsx', indent: 2 },
-    { name: 'main.tsx', type: 'file', path: 'src/main.tsx', indent: 2 },
-    { name: 'index.html', type: 'file', path: 'index.html', indent: 1 },
-    { name: 'package.json', type: 'file', path: 'package.json', indent: 1 },
-  ];
+  // Inputs for creating files/folders
+  const [showCreateInput, setShowCreateInput] = useState<'file' | 'folder' | null>(null);
+  const [newItemName, setNewItemName] = useState<string>('');
+  const [newItemPathPrefix, setNewItemPathPrefix] = useState<string>('');
 
-  const fileContents: Record<string, string> = {
-    'src/components/AppShell.tsx': `import React from 'react';\n\nexport default function AppShell({ children }) {\n  return (\n    <div className="min-h-screen bg-ivory-50 flex">\n      {children}\n    </div>\n  );\n}`,
-    'src/components/Sidebar.tsx': `import React from 'react';\n\nexport default function Sidebar() {\n  return <aside className="w-64 bg-white border-r">Sidebar</aside>;\n}`,
-    'src/App.tsx': `import React from 'react';\nimport AppShell from './components/AppShell';\n\nexport default function App() {\n  return (\n    <AppShell>\n      <main className="p-8">\n        <h1 className="text-3xl font-serif font-bold">Hello Aster</h1>\n      </main>\n    </AppShell>\n  );\n}`,
-    'src/main.tsx': `import React from 'react';\nimport ReactDOM from 'react-dom/client';\nimport App from './App';\nimport './index.css';\n\nReactDOM.createRoot(document.getElementById('root')).render(<App />);`,
-    'index.html': `<!DOCTYPE html>\n<html>\n  <body>\n    <div id="root"></div>\n  </body>\n</html>`,
-    'package.json': `{\n  "name": "aster-code-web",\n  "version": "0.1.0",\n  "dependencies": {\n    "react": "^18.3.1"\n  }\n}`
+  const terminalEndRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Fetch file tree
+  const loadFiles = async () => {
+    if (!runtimeConnected) return;
+    try {
+      const res = await fetch('/api/workspace/files');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setFiles(data.files);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load workspace files', e);
+    }
+  };
+
+  // Read file contents
+  const loadFileContent = async (filePath: string) => {
+    try {
+      const res = await fetch(`/api/workspace/file?path=${encodeURIComponent(filePath)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setActiveFilePath(filePath);
+          setEditorContent(data.content);
+          setHasUnsavedChanges(false);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load file contents', e);
+    }
+  };
+
+  // Write file contents
+  const handleSaveFile = async () => {
+    if (!activeFilePath) return;
+    try {
+      const res = await fetch('/api/workspace/file', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: activeFilePath, content: editorContent })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setHasUnsavedChanges(false);
+          setLogs(prev => [...prev, `[System] Saved changes to ${activeFilePath}\n`]);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to save file changes', e);
+    }
+  };
+
+  // Create new item (file or folder)
+  const handleCreateItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newItemName.trim() || !showCreateInput) return;
+
+    const targetPath = newItemPathPrefix 
+      ? `${newItemPathPrefix}/${newItemName.trim()}`
+      : newItemName.trim();
+
+    try {
+      let res;
+      if (showCreateInput === 'file') {
+        res = await fetch('/api/workspace/file', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: targetPath, content: '// New file created in Aster' })
+        });
+      } else {
+        res = await fetch('/api/workspace/folder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: targetPath })
+        });
+      }
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setLogs(prev => [...prev, `[System] Created ${showCreateInput} at ${targetPath}\n`]);
+          setNewItemName('');
+          setShowCreateInput(null);
+          await loadFiles();
+          if (showCreateInput === 'file') {
+            await loadFileContent(targetPath);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Failed to create workspace item', e);
+    }
+  };
+
+  // Delete item
+  const handleDeleteItem = async (filePath: string) => {
+    if (!window.confirm(`Are you sure you want to delete ${filePath}?`)) return;
+    try {
+      const res = await fetch(`/api/workspace/file?path=${encodeURIComponent(filePath)}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setLogs(prev => [...prev, `[System] Deleted ${filePath}\n`]);
+          if (activeFilePath === filePath) {
+            setActiveFilePath(null);
+            setEditorContent('');
+          }
+          await loadFiles();
+        }
+      }
+    } catch (e) {
+      console.error('Failed to delete workspace item', e);
+    }
+  };
+
+  // Trigger commands
+  const runProfileCommand = async (command: string) => {
+    try {
+      setLogs([]); // Clear logs for fresh start
+      const res = await fetch('/api/commands/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setLogs(prev => [...prev, `[Error] ${data.error || 'Command failed'}\n`]);
+      }
+    } catch (e: any) {
+      setLogs(prev => [...prev, `[Error] Failed to trigger execution: ${e.message}\n`]);
+    }
+  };
+
+  const stopActiveCommand = async () => {
+    try {
+      await fetch('/api/commands/stop', { method: 'POST' });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Load files and connect SSE log listeners on mount
+  useEffect(() => {
+    if (!runtimeConnected) return;
+
+    loadFiles();
+
+    // Setup SSE connection
+    const eventSource = new EventSource('/api/events');
+
+    eventSource.addEventListener('log', (e: MessageEvent) => {
+      const data = JSON.parse(e.data);
+      setLogs(prev => [...prev, data.text]);
+    });
+
+    eventSource.addEventListener('command_status', (e: MessageEvent) => {
+      const data = JSON.parse(e.data);
+      setCommandStatus(data.status);
+      setRunningCommand(data.command || null);
+    });
+
+    eventSource.addEventListener('preview_status', (e: MessageEvent) => {
+      const data = JSON.parse(e.data);
+      if (data.available && data.url) {
+        setPreviewUrl(data.url);
+      } else {
+        setPreviewUrl(null);
+      }
+    });
+
+    eventSource.onerror = (err) => {
+      console.error('[SSE] Connection lost', err);
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [runtimeConnected]);
+
+  // Scroll to bottom of logs automatically
+  useEffect(() => {
+    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [logs]);
+
+  const toggleFolder = (folderPath: string) => {
+    setExpandedFolders(prev => ({ ...prev, [folderPath]: !prev[folderPath] }));
+  };
+
+  // Recursive folder node tree render helper
+  const renderNode = (node: FileNode) => {
+    const isFolder = node.type === 'directory';
+    const isOpen = !!expandedFolders[node.path];
+
+    if (isFolder) {
+      return (
+        <div key={node.path} className="select-none">
+          <div className="flex items-center justify-between group hover:bg-ivory-100/60 rounded-lg px-2.5 py-1">
+            <button
+              onClick={() => toggleFolder(node.path)}
+              className="flex-1 flex items-center gap-1.5 text-xs font-semibold text-ivory-700 text-left"
+            >
+              {isOpen ? (
+                <ChevronDown className="w-3.5 h-3.5 text-ivory-400 shrink-0" />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5 text-ivory-400 shrink-0" />
+              )}
+              <Folder className="w-3.5 h-3.5 text-[#866854] shrink-0" />
+              <span className="truncate">{node.name}</span>
+            </button>
+
+            {/* Quick folder action controllers */}
+            <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+              <button
+                onClick={() => {
+                  setNewItemPathPrefix(node.path);
+                  setShowCreateInput('file');
+                }}
+                className="p-0.5 hover:bg-ivory-200 rounded text-ivory-500 hover:text-clay"
+                title="Create file here"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+              <button
+                onClick={() => handleDeleteItem(node.path)}
+                className="p-0.5 hover:bg-ivory-200 rounded text-ivory-500 hover:text-rose-600"
+                title="Delete directory"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+
+          {isOpen && node.children && (
+            <div className="pl-3.5 border-l border-ivory-200/60 ml-4.5 mt-0.5 space-y-0.5">
+              {node.children.map(child => renderNode(child))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div key={node.path} className="flex items-center justify-between group hover:bg-ivory-100/60 rounded-lg px-2.5 py-1">
+        <button
+          onClick={() => loadFileContent(node.path)}
+          className={`flex-1 flex items-center gap-1.5 text-xs text-left ${
+            activeFilePath === node.path ? 'text-ivory-900 font-bold' : 'text-ivory-600'
+          }`}
+        >
+          <span className="w-3.5 h-3.5 shrink-0" />
+          <File className="w-3.5 h-3.5 text-ivory-400 shrink-0" />
+          <span className="truncate">{node.name}</span>
+        </button>
+        
+        <button
+          onClick={() => handleDeleteItem(node.path)}
+          className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-ivory-200 rounded text-ivory-500 hover:text-rose-600"
+          title="Delete file"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    );
   };
 
   return (
-    <div className="flex h-full w-full bg-ivory-50 overflow-hidden relative">
-      {/* Offline Mask */}
+    <div className="flex h-full w-full bg-ivory-50 overflow-hidden relative select-none">
+      {/* Offline Alert Mask */}
       {!runtimeConnected && (
-        <div className="absolute inset-0 bg-ivory-100/60 backdrop-blur-[1.5px] z-50 flex flex-col items-center justify-center text-center p-8 select-none">
+        <div className="absolute inset-0 bg-ivory-100/60 backdrop-blur-[1.5px] z-50 flex flex-col items-center justify-center text-center p-8">
           <div className="p-4 bg-white rounded-2xl border border-ivory-200 shadow-soft max-w-sm">
             <Monitor className="w-8 h-8 mx-auto text-[#866854] mb-3 opacity-60" />
             <h3 className="text-sm font-semibold text-ivory-800 mb-1">Runtime Not Connected Yet</h3>
             <p className="text-xs text-ivory-500 mb-4">
-              Connect to the local server or start the Express runtime backend on port 3001 to enable workbench edits and previews.
+              Connect to the local server or start the Express runtime backend on port 3001 to enable workbench file systems and dev previews.
             </p>
-            <div className="text-[10px] text-ivory-400 font-mono bg-ivory-50 px-2 py-1.5 rounded-lg border border-ivory-200/60">
-              node apps/runtime/dist/server.js
-            </div>
           </div>
         </div>
       )}
 
-      {/* Sidebar Explorer */}
+      {/* Explorer Column */}
       <div className="w-60 border-r border-ivory-200 bg-white flex flex-col shrink-0">
-        <div className="p-4 border-b border-ivory-200 flex items-center justify-between">
+        <div className="p-4 border-b border-ivory-200 flex items-center justify-between shrink-0">
           <span className="text-xs font-semibold text-ivory-500 uppercase tracking-wider font-sans">Workspace files</span>
+          <div className="flex gap-1.5">
+            <button
+              onClick={() => {
+                setNewItemPathPrefix('');
+                setShowCreateInput('file');
+              }}
+              className="p-1 hover:bg-ivory-100 rounded text-ivory-500 hover:text-clay"
+              title="New File"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => {
+                setNewItemPathPrefix('');
+                setShowCreateInput('folder');
+              }}
+              className="p-1 hover:bg-ivory-100 rounded text-ivory-500 hover:text-clay"
+              title="New Folder"
+            >
+              <Folder className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-2.5 space-y-0.5">
-          {fileTree.map((item) => {
-            const isDir = item.type === 'dir';
-            const indentStyle = item.indent ? { paddingLeft: `${item.indent * 12}px` } : {};
-            
-            return (
-              <button
-                key={item.path}
-                onClick={() => {
-                  if (!isDir) setActiveFile(item.path);
-                }}
-                className={`w-full text-left flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  activeFile === item.path && !isDir
-                    ? 'bg-ivory-100/80 text-ivory-900 font-semibold'
-                    : 'text-ivory-600 hover:bg-ivory-50'
-                }`}
-                style={indentStyle}
-              >
-                {isDir ? (
-                  <>
-                    <ChevronDown className="w-3.5 h-3.5 text-ivory-400" />
-                    <Folder className="w-3.5 h-3.5 text-[#866854]/80 shrink-0" />
-                  </>
-                ) : (
-                  <>
-                    <span className="w-3.5 h-3.5" />
-                    <File className="w-3.5 h-3.5 text-ivory-400 shrink-0" />
-                  </>
-                )}
-                <span className="truncate">{item.name}</span>
-              </button>
-            );
-          })}
+
+        {/* Create Input Field modal overlay */}
+        {showCreateInput && (
+          <form onSubmit={handleCreateItem} className="p-3 bg-ivory-50 border-b border-ivory-200 flex gap-2">
+            <input
+              type="text"
+              autoFocus
+              placeholder={showCreateInput === 'file' ? 'filename.js' : 'folder_name'}
+              value={newItemName}
+              onChange={e => setNewItemName(e.target.value)}
+              className="flex-1 text-xs bg-white border border-ivory-200 rounded px-2 py-1 focus:outline-none focus:border-clay"
+            />
+            <button
+              type="submit"
+              className="bg-[#866854] text-white text-[10px] px-2 py-1 rounded hover:bg-[#725441]"
+            >
+              Add
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowCreateInput(null);
+                setNewItemName('');
+              }}
+              className="text-ivory-500 hover:text-rose-600 p-1"
+            >
+              <XCircle className="w-4.5 h-4.5" />
+            </button>
+          </form>
+        )}
+
+        {/* Recursive File Tree */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-0.5">
+          {files.length === 0 ? (
+            <div className="text-center p-6 text-ivory-400 text-xs">
+              Workspace empty.
+            </div>
+          ) : (
+            files.map(node => renderNode(node))
+          )}
         </div>
       </div>
 
-      {/* Editor & Terminal (Left) / Live Preview (Right) Split */}
+      {/* Editor & Terminal Column */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Editor Area */}
+        {/* Simple Editor Panel */}
         <div className="flex-1 flex flex-col min-h-0 bg-white border-b border-ivory-200">
-          <div className="h-10 bg-ivory-50/50 border-b border-ivory-200 flex items-center px-4 justify-between">
+          <div className="h-10 bg-ivory-50/50 border-b border-ivory-200 flex items-center px-4 justify-between shrink-0">
             <div className="flex items-center gap-1.5 text-xs text-ivory-500">
               <FileText className="w-3.5 h-3.5" />
-              <span className="font-mono text-[11px] font-medium text-ivory-700">{activeFile}</span>
+              <span className="font-mono text-[11px] font-semibold text-ivory-700">
+                {activeFilePath ? activeFilePath : 'No active file'}
+              </span>
+              {hasUnsavedChanges && (
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" title="Unsaved changes" />
+              )}
             </div>
-            <span className="text-[10px] bg-ivory-200/70 border border-ivory-300/40 rounded px-1.5 py-0.5 text-ivory-600 font-mono">TypeScript React</span>
+
+            {activeFilePath && (
+              <button
+                onClick={handleSaveFile}
+                disabled={!hasUnsavedChanges}
+                className="text-[10px] font-semibold bg-[#866854] text-white hover:bg-[#725441] disabled:bg-ivory-200 disabled:text-ivory-400 px-2.5 py-1 rounded transition-all flex items-center gap-1"
+              >
+                <Save className="w-3 h-3" />
+                Save
+              </button>
+            )}
           </div>
-          <div className="flex-1 overflow-auto p-6 bg-[#FAF9F6] font-mono text-xs leading-relaxed text-ivory-700 whitespace-pre">
-            {fileContents[activeFile] || `// No content loaded.`}
-          </div>
+
+          <textarea
+            value={editorContent}
+            onChange={(e) => {
+              setEditorContent(e.target.value);
+              setHasUnsavedChanges(true);
+            }}
+            placeholder="// Click on a file from explorer to edit content."
+            disabled={!activeFilePath}
+            className="flex-1 resize-none p-6 font-mono text-[12px] leading-relaxed text-ivory-700 focus:outline-none select-text disabled:bg-[#FAF9F6] disabled:text-ivory-400"
+          />
         </div>
 
-        {/* Terminal Area */}
-        <div className="h-44 bg-ivory-900 text-ivory-100 flex flex-col shrink-0 font-mono">
-          <div className="h-8 bg-ivory-950 border-b border-ivory-800 flex items-center justify-between px-4 text-xs font-semibold text-ivory-400">
+        {/* Command Buttons & Console Log panel */}
+        <div className="h-48 bg-ivory-900 text-ivory-100 flex flex-col shrink-0 font-mono">
+          <div className="h-9 bg-ivory-950 border-b border-ivory-800 flex items-center justify-between px-4 text-xs font-semibold text-ivory-400 shrink-0">
             <span className="flex items-center gap-2">
               <TermIcon className="w-3.5 h-3.5" />
-              Terminal / Execution console
+              Terminal logs
             </span>
+
+            {/* Quick execution controls */}
+            <div className="flex gap-2">
+              {commandStatus === 'running' ? (
+                <button
+                  onClick={stopActiveCommand}
+                  className="bg-rose-700 text-white hover:bg-rose-800 px-2 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1"
+                >
+                  <XCircle className="w-3 h-3" />
+                  Stop process ({runningCommand})
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => runProfileCommand('npm install')}
+                    className="bg-ivory-800 hover:bg-ivory-700 text-ivory-300 hover:text-white px-2 py-0.5 rounded text-[10px] font-semibold"
+                  >
+                    npm install
+                  </button>
+                  <button
+                    onClick={() => runProfileCommand('npm run dev')}
+                    className="bg-[#866854] hover:bg-[#725441] text-white px-2.5 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1"
+                  >
+                    <Play className="w-2.5 h-2.5" />
+                    npm run dev
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => setLogs([])}
+                className="text-ivory-500 hover:text-ivory-300 px-1.5 py-0.5 text-[10px] border border-ivory-800 hover:border-ivory-700 rounded"
+              >
+                Clear
+              </button>
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 text-[11px] leading-normal text-emerald-400 space-y-1 select-text">
-            <div>$ npm run dev</div>
-            <div className="text-ivory-400">&gt; aster-code-web@0.1.0 dev</div>
-            <div className="text-ivory-400">&gt; vite</div>
-            <div>[vite] Local:   http://localhost:5173/</div>
-            <div>[vite] Network: use --host to expose</div>
-            <div>[vite] HMR connection open. Ready.</div>
+
+          {/* Streaming command output logs window */}
+          <div className="flex-1 overflow-y-auto p-4 text-[10.5px] leading-relaxed text-emerald-400 space-y-0.5 select-text">
+            {logs.length === 0 ? (
+              <div className="text-ivory-500 italic">Terminal idle. Click "npm install" or "npm run dev" to spin up sandbox nodes.</div>
+            ) : (
+              logs.map((logLine, idx) => (
+                <div key={idx} className="whitespace-pre-wrap">{logLine}</div>
+              ))
+            )}
+            <div ref={terminalEndRef} />
           </div>
         </div>
       </div>
 
-      {/* Preview Column (Right) */}
+      {/* Live Preview Pane */}
       <div className="w-96 border-l border-ivory-200 bg-white flex flex-col shrink-0">
-        <div className="h-10 border-b border-ivory-200 bg-ivory-50/50 flex items-center px-4 justify-between">
+        <div className="h-10 border-b border-ivory-200 bg-ivory-50/50 flex items-center px-4 justify-between shrink-0">
           <span className="text-xs font-semibold text-ivory-500 uppercase tracking-wider font-sans flex items-center gap-1.5">
             <Eye className="w-3.5 h-3.5" />
             Live Preview
           </span>
-          <span className="text-[10px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Port 5173
-          </span>
+          {previewUrl && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  if (iframeRef.current) {
+                    iframeRef.current.src = iframeRef.current.src;
+                  }
+                }}
+                className="p-1 hover:bg-ivory-100 rounded text-ivory-500 hover:text-clay"
+                title="Reload Preview"
+              >
+                <RefreshCw className="w-3 h-3" />
+              </button>
+              <span className="text-[10px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 border border-emerald-100 rounded-full flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Active
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Mock Preview Page */}
-        <div className="flex-1 p-6 bg-ivory-100/40 overflow-y-auto flex items-center justify-center">
-          <div className="w-full bg-white border border-ivory-200 rounded-xl shadow-soft p-6 text-center">
-            <div className="w-12 h-12 bg-ivory-100 rounded-full flex items-center justify-center mx-auto text-[#866854] font-bold text-lg mb-4">
-              A
+        {/* Live Preview container box */}
+        <div className="flex-1 bg-ivory-100/40 p-4 flex flex-col">
+          {previewUrl ? (
+            <iframe
+              ref={iframeRef}
+              src={previewUrl}
+              title="Aster Sandbox Frame"
+              className="flex-1 w-full bg-white border border-ivory-200 rounded-xl shadow-soft"
+              sandbox="allow-scripts allow-same-origin"
+            />
+          ) : (
+            <div className="flex-1 border border-dashed border-ivory-300/80 rounded-2xl flex flex-col items-center justify-center text-center p-6 bg-white">
+              <Monitor className="w-8 h-8 text-ivory-400 mb-2 opacity-50" />
+              <h4 className="text-xs font-bold text-ivory-700">Preview offline</h4>
+              <p className="text-[10px] text-ivory-400 max-w-[200px] mt-1.5 leading-relaxed">
+                Start your local dev process using the terminal controls (e.g. click "npm run dev") to expose preview frames.
+              </p>
             </div>
-            <h1 className="font-serif text-xl font-bold text-ivory-800 mb-1">Hello Aster</h1>
-            <p className="text-xs text-ivory-500 mb-6">Welcome to your coding agent sandbox. Try making changes to App.tsx in the editor.</p>
-            <div className="border-t border-ivory-100 pt-4 flex justify-between text-[10px] text-ivory-400 font-medium">
-              <span>Status: Active</span>
-              <span>Latency: 14ms</span>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
