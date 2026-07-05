@@ -32,4 +32,12 @@ A calm, Claude-inspired coding-agent studio combining:
    ```
 5. Open http://localhost:5173 in your browser.
 
+### Desktop App (Electron)
+
+```bash
+# All-in-one: runtime + web + desktop
+npm run app:dev
+```
+
 > See **[docs/LOCAL_TESTING.md](docs/LOCAL_TESTING.md)** for detailed Windows PowerShell instructions and a smoke test checklist.
+> See **[docs/DESKTOP_APP.md](docs/DESKTOP_APP.md)** for Electron desktop setup, scripts, and troubleshooting.

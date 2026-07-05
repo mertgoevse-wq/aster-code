@@ -12,6 +12,17 @@ Status: SUCCESS — All builds pass cleanly
 4. `npm run build` — 0 errors
 5. `npm run runtime:build` — 0 errors
 
+## Electron Desktop App Shell
+- Created `apps/desktop/` workspace with Electron + electron-builder
+- 4 source files: `main.ts` (main process), `preload.ts` (secure bridge), `window.ts` (BrowserWindow factory), `tsconfig.json` (CommonJS)
+- Desktop behavior: 1440×900 default, 1024×700 min, ivory #FAF9F6 background, menu hidden in production, DevTools only in dev
+- Security: `contextIsolation: true`, `nodeIntegration: false`, minimal preload (platform/version/isElectron only)
+- Dev mode: loads Vite dev server at `localhost:5173`; Production: loads built web assets via `file://`
+- Windows packaging: electron-builder with NSIS installer
+- Root scripts: `desktop:dev`, `desktop:build`, `desktop:dist`, `app:dev`, `app:build`
+- `docs/DESKTOP_APP.md` — full setup guide, troubleshooting (blank window, runtime offline, Windows Defender)
+- Known MVP limitations: no production API proxy (Vite proxy only works in dev), default Electron icon, `app:dev` race condition
+
 ## UI Foundation Fix — Restore Styled Desktop App Shell
 - **Root cause:** `postcss.config.js` was missing. Tailwind CSS requires PostCSS to process `@tailwind` directives. Without it, Vite served the CSS raw with `@tailwind base/components/utilities` that browsers can't interpret, resulting in completely unstyled HTML.
 - **Fix:** Created `apps/web/postcss.config.js` with Tailwind + Autoprefixer plugins

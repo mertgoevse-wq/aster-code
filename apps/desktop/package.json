@@ -1,0 +1,48 @@
+{
+  "name": "@aster-code/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Aster Code Desktop Application (Electron)",
+  "main": "./dist/main.js",
+  "scripts": {
+    "dev": "tsc && electron .",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "dist": "electron-builder --win --config"
+  },
+  "build": {
+    "appId": "com.aster-code.desktop",
+    "productName": "Aster Code",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "../web/dist/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "extraResources": []
+  },
+  "dependencies": {
+    "electron-log": "^5.1.7"
+  },
+  "devDependencies": {
+    "electron": "^32.1.2",
+    "electron-builder": "^25.1.7",
+    "typescript": "^5.4.5"
+  }
+}

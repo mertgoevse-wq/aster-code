@@ -36,7 +36,11 @@ The agent loop architecture is in place but execution is simulated. The next pro
 
 ## Medium Priority
 
-### Step 5: Implement Real OAuth Flow
+### Step 5: Fix Production API Proxy
+- **File**: `apps/desktop/src/main.ts`, `apps/web/vite.config.ts`
+- **Action**: Either have Electron's main process start the runtime as a child process, or configure the web build to detect Electron and use `http://localhost:3001` directly for API calls instead of `/api/*` relative paths.
+
+### Step 6: Implement Real OAuth Flow
 - **File**: `apps/runtime/src/auth/githubOAuth.ts`, `googleOAuth.ts`
 - **Action**: Implement token exchange (code → access_token), user profile fetch, session creation
 - Add CSRF state validation (store generated states, verify on callback)
@@ -81,6 +85,13 @@ The agent loop architecture is in place but execution is simulated. The next pro
 - `docs/EXTERNAL_REPO_RESEARCH.md`, `SKILL_CANDIDATE_MATRIX.md`, `REPO_LICENSE_REVIEW.md`
 - 8 placeholder skill candidates added to registry (all `inactive`)
 - See `docs/SKILL_CANDIDATE_MATRIX.md` for Tier 1 priority candidates
+
+## Completed: Electron Desktop App ✅
+- `apps/desktop/` workspace with Electron + electron-builder
+- Main process, preload, window factory — secure defaults
+- Root scripts: desktop:dev, desktop:build, desktop:dist, app:dev, app:build
+- `docs/DESKTOP_APP.md` — setup, scripts, troubleshooting
+- Known MVP limits: no production API proxy, default icon
 
 ## Completed: UI Foundation Fix ✅
 - **Root cause:** Missing `postcss.config.js` — Tailwind never processed CSS directives

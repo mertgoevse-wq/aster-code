@@ -25,3 +25,8 @@ yarn-error.log*
 logs/
 *.log
 _research/import-candidates/
+
+# Electron builder output
+apps/desktop/dist-electron/
+*.exe
+*.msi

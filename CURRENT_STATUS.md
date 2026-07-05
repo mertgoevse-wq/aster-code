@@ -55,6 +55,7 @@ aster-code/
 16. **🆕 Agent skill routing** — Automatic intent classification (14 categories) + skill router with confidence/risk/permissions; routing preview in Chat
 17. **🆕 MCP Gateway** — Governed MCP server registry (4 default servers, all disabled), tool discovery with policy filtering, 5-layer access control, audit logging, mcpo OpenAPI bridge placeholder
 18. **🆕 Auth Scaffolding** — GitHub/Google OAuth scaffold (placeholders), local-first mode always works, session store, CSRF state generation, auth section in Settings
+19. **🆕 Electron Desktop App** — Electron shell wraps web UI, 1440×900, ivory theme, secure preload, electron-builder NSIS packaging
 
 ### MCP Gateway API Endpoints
 1. **Server management** — `GET/POST/PATCH/DELETE /mcp/servers` for MCP server config CRUD
@@ -111,6 +112,7 @@ aster-code/
 5. **No real LLM completion** — No `/api/chat/completions` or similar endpoint
 7. **🆕 MCP Gateway** — Governed MCP server registry (4 default servers, all disabled), tool discovery with policy filtering, 5-layer access control, audit logging, mcpo OpenAPI bridge placeholder
 8. **🆕 Auth module** — GitHub/Google OAuth scaffold (not yet implemented), local-first always works
+9. **🆕 Desktop app** — Electron shell with NSIS Windows installer (production API proxy is MVP limitation)
 
 ### Build Dependencies
 1. **2 npm vulnerabilities** (1 moderate, 1 high) — In transitive deps, run `npm audit fix` to address
