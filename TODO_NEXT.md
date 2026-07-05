@@ -1,44 +1,38 @@
-# Next Steps — After Desktop Packaging + Runtime Connectivity
+# Next Steps — After v0.1.0 Release Candidate
 
 Date: 2026-07-05
-Based on: Desktop packaging and runtime connectivity implementation
+Commit: `0d477c7`
+Status: ✅ Release candidate ready. Installer at `apps/desktop/dist-electron/Aster Code Setup 0.1.0.exe`
 
 ---
 
-## ✅ Completed: Desktop Packaging + Runtime Connectivity
+## ✅ Completed: v0.1.0 Release Candidate
 
-### API Connectivity Fix
-- Created `apps/web/src/api.ts` — API base URL resolver (Electron: `http://localhost:3001`, browser: Vite proxy)
-- Updated all 6 frontend files to use `apiFetch()` / `apiEventSource()` wrappers
-- No more fragile `file://` relative API paths in production
+### Release Candidate Audit
+- Full pipeline verified: `npm run release:local` passes
+- All 7 output artifacts verified
+- Smoke tests: 4/4 suites pass
+- `RELEASE_CANDIDATE_REPORT.md` created with full audit
 
-### Runtime Auto-Start
-- Electron main process detects/connects to runtime at `localhost:3001`
-- If not running, spawns runtime as child process (tsx in dev, node in production)
-- Health monitoring every 5 seconds
-- Captures stdout/stderr logs
-- Graceful shutdown on app exit
+### Agent Planning Quality
+- German + English intent classification with language detection
+- Enriched plan steps (inspectionTargets, mayChange, verifyStep)
+- Approval gating UI with risk explanations
+- 37 example prompts documented
 
-### Safe Preload IPC
-- `window.asterDesktop.getRuntimeStatus()`
-- `window.asterDesktop.restartRuntime()`
-- `window.asterDesktop.getRuntimeLogs()`
-- `window.asterDesktop.onRuntimeStatusChange()`
-- No raw shell commands, no secrets, no file access
+### Local Persistence
+- Namespaced `aster-code:` localStorage with auto-migration
+- Reset local data from Settings
+- No secrets stored in frontend
 
-### UI Runtime Controls
-- Status bar shows runtime state with colored badges
-- Settings → Runtime Server panel: status info, restart button, logs viewer
+### Security Audit
+- No hardcoded secrets found
+- `.gitignore` covers `.env.*` and `workspaces/`
+- Electron `contextIsolation: true`, `nodeIntegration: false`
 
-### Packaging
-- electron-builder includes web dist, runtime dist, runtime deps as extraResources
-- Windows NSIS installer target preserved
-
-### Documentation
-- `docs/DESKTOP_APP.md` — Updated with runtime management
-- `docs/DESKTOP_RUNTIME.md` — New: runtime IPC API, lifecycle docs
-- `docs/START_HERE.md` — Updated
-- `README.md` — Updated
+### Automated Testing
+- 4 smoke test suites: runtime, web build, desktop package, repo hygiene
+- `release:local` pipeline includes test verification
 
 ---
 

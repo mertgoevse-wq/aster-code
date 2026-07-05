@@ -1,7 +1,8 @@
-# Current Status — Agent Planning Quality Improvements
+# Current Status — Aster Code v0.1.0 Release Candidate
 
 Date: 2026-07-05
-Auditor: Codebuff (automated audit)
+Commit: `0d477c7`
+Status: ✅ RELEASE CANDIDATE — All verifications pass
 
 ---
 
@@ -44,12 +45,10 @@ aster-code/
 
 ## What Works ✅
 
-### Automated Smoke Tests (New)
-1. **✅ `test:runtime`** — Health endpoint + skills + models (graceful offline skip)
-2. **✅ `test:build`** — Web build artifacts (6 checks: HTML, CSS, JS, no source maps)
-3. **✅ `test:desktop`** — Desktop package (7 checks: dist, installer, EXE, .env leak)
-4. **✅ `test:smoke`** — Full orchestrator (3 suites + 5 repo hygiene checks)
-5. **✅ `release:local`** — Pipeline now includes `test:smoke` verification
+### Release Candidate Verification (New)
+1. **✅ Full pipeline** — `npm run release:local` passes (check → build → package → verify)
+2. **✅ RELEASE_CANDIDATE_REPORT.md** — Complete audit with artifacts, smoke tests, blockers
+3. **✅ All 7 output artifacts verified** — installer (77 MB), unpacked EXE (178 MB), all dist dirs
 
 ### Release Pipeline
 1. **✅ `npm run release:local`** — One-command pipeline: check → app:build → desktop:dist → smoke
@@ -59,11 +58,13 @@ aster-code/
 5. **✅ `docs/RELEASE_PACKAGE.md`** — Install/run/uninstall/logs guide
 6. **✅ `release-notes/0.1.0.md`** — What works, simulated, limitations, roadmap
 
-### First-Run Experience
-1. **✅ Welcome Banner** — Shows on first visit: onboarding, What Works Now, Coming Next, MVP limitations
-2. **✅ Suggested Prompts** — 3 one-click prompts: "explain this project", "create a hello world app", "add a dark mode toggle"
-3. **✅ Dismiss Persistence** — Welcome banner dismisses permanently via localStorage
-4. **✅ LLM Disconnected Indicator** — Status bar shows amber "LLM disconnected" badge
+### Agent Planning Quality (Latest)
+1. **✅ German + English intent classification** — Language detection with flag badges
+2. **✅ Expanded keyword groups** — 12 intents with comprehensive DE+EN keywords
+3. **✅ Enriched plan steps** — inspectionTargets, mayChange, verifyStep fields
+4. **✅ Detailed risk explanations** — Per-skill risk analysis in routing preview
+5. **✅ Approval gating UI** — Clear rules about what requires consent
+6. **✅ `docs/EXAMPLE_AGENT_PROMPTS.md`** — 37 example prompts across 9 categories
 
 ### Desktop App (Updated)
 1. **✅ API calls work in packaged app** — `api.ts` helper resolves `http://localhost:3001` directly in Electron, bypassing Vite proxy

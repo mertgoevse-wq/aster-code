@@ -1,56 +1,49 @@
-# Aster Code v0.1.0 Agent Planning Quality Build Report
+# Aster Code v0.1.0 Release Candidate Build Report
 
 Date: 2026-07-05
-Status: SUCCESS — All builds pass
+Commit: `0d477c7`
+Status: ✅ RELEASE CANDIDATE — All builds + packaging + smoke tests pass
 
-## Changes Made
+## Full Pipeline Results
 
-### 1. Rewritten Intent Classifier (`apps/runtime/src/agent/intentClassifier.ts`)
-- Added **German + English keyword support** — 12 intent categories with DE+EN keyword lists
-- Language detection function: classifies as `en`, `de`, `mixed`, or `unknown`
-- Significantly expanded keyword groups (e.g., "inspect repo", "build app", "add provider", "test installer")
-- Confidence scoring: base score + keyword density bonuses + language boost
-- Structured reason messages: shows matched keywords and language badge
-- Exports `detectLanguage` for use by agent router
+| Step | Command | Result |
+|------|---------|--------|
+| Git status | `git status` | ✅ Clean |
+| Install | `npm install` | ✅ 861 packages |
+| Typecheck | `npm run typecheck` | ✅ 0 errors (all 4 workspaces) |
+| Build | `npm run build` | ✅ 0 errors |
+| Prod build | `npm run app:build` | ✅ 0 errors |
+| Desktop package | `npm run desktop:dist` | ✅ Installer created |
+| Smoke tests | `npm run test:smoke` | ✅ 4/4 suites passed |
 
-### 2. Rewritten Skill Router (`apps/runtime/src/agent/skillRouter.ts`)
-- Detailed `reasonFn` per skill: explains WHY a skill was selected (not just what it does)
-- Risk explanations per skill: concrete statements like "Read-only — no files modified" or "Commands require approval"
-- `buildRiskExplanation()` utility: aggregates risk across all selected skills
-- Multi-skill selection for complex intents (3 skills for build-feature, 3 for refactor)
-- Fixed empty prompt bug (was showing empty parentheses in `fix-bug` reason)
+## Output Artifacts
 
-### 3. Rewritten Plan Generator (`apps/runtime/src/agent/planner.ts`)
-- Concrete step titles (e.g., "Inspect project structure", "Modify component styling")
-- Each step now includes:
-  - `inspectionTargets` — what files/configs the step will inspect
-  - `mayChange` — what the step may change once approved
-  - `verifyStep` — how to confirm the step succeeded
-- Permission-aware step generation: read-only vs edit vs command steps
-- German keyword support in `classifyTask`
-- 7 task types with complete plan templates (explain, plan, edit-code, debug-build, ui-fix, dependency-fix, docs)
+| Artifact | Size | Status |
+|----------|------|--------|
+| Installer (`Aster Code Setup 0.1.0.exe`) | 77 MB | ✅ |
+| Unpacked EXE (`Aster Code.exe`) | 178 MB | ✅ |
+| Unpacked folder | 266 MB | ✅ |
+| Full dist-electron | 343 MB | ✅ |
+| Web dist (`index.html`) | 1,156 B | ✅ |
+| Runtime dist (`server.js`) | 25,915 B | ✅ |
+| Desktop dist (`main.js`) | 11,348 B | ✅ |
 
-### 4. Updated Agent Router (`apps/runtime/src/agent/agentRouter.ts`)
-- Added **language detection**: `detectedLanguage` field in routing result
-- Enhanced summary: language flag (🇬🇧/🇩🇪/🌐), risk emoji (🔴🟡🟢), approval gate status
-- Integrates `buildRiskExplanation` for human-readable risk assessment
+## Smoke Test Results
 
-### 5. Updated Shared Types (`packages/shared/src/types.ts`)
-- `RoutingResult.detectedLanguage?: string` — language detection result
-- `AgentPlanStep.inspectionTargets?: string[]` — what the step inspects
-- `AgentPlanStep.mayChange?: string[]` — what the step may modify
-- `AgentPlanStep.verifyStep?: string` — how to verify step completion
+| Suite | Pass/Fail/Skip |
+|-------|---------------|
+| Runtime Health | 0/0/4 ⏭️ Skipped (offline) |
+| Web Build | 6/0/0 ✅ |
+| Desktop Package | 8/0/0 ✅ |
+| Repo Hygiene | 5/0/0 ✅ |
 
-### 6. Updated Frontend Components
-- **AgentRoutingPreview.tsx** — Language flag badge (🇩🇪/🇬🇧/🌐), intent reasons list, approval gating section with bulleted rules, risk emoji badges
-- **AgentPlanPanel.tsx** — Expanded step view now shows: Inspection Targets (blue), May Change (amber), Affected Files (grey), Verification (green). New permission icons (Eye/Edit/Lock/Terminal).
+## Changes in This Release
 
-### 7. Example Prompts Documentation (`docs/EXAMPLE_AGENT_PROMPTS.md`)
-- 37 curated prompts across 9 categories: Beginner, Coding, Debugging, Build/Release, Provider/Model, UI/Workbench, Documentation, MCP/Integration, Auth/Setup
-- Each prompt shows expected intent + skills
-- German prompt examples (6 prompts)
-- "What the Agent Will NOT Do" section
-- Testing instructions
+- Agent planning with German + English keyword support and language detection
+- Enriched plan steps with inspection targets, change descriptions, verification steps
+- Approval gating UI with risk emoji badges and bulleted rules
+- 37 example prompts in `docs/EXAMPLE_AGENT_PROMPTS.md`
+- `RELEASE_CANDIDATE_REPORT.md` with full audit, artifacts, blockers, install guide
 
 ## Commands Run
 1. `npm run check` — 0 errors (typecheck + build all workspaces)

@@ -40,9 +40,11 @@ See **[docs/RELEASE_PACKAGE.md](docs/RELEASE_PACKAGE.md)** for full install/run/
 
 | Document | Description |
 |----------|-------------|
+| **[RELEASE_CANDIDATE_REPORT.md](RELEASE_CANDIDATE_REPORT.md)** | ✅ v0.1.0 RC: full verification, artifacts, smoke tests |
 | **[docs/START_HERE.md](docs/START_HERE.md)** | Beginner step-by-step guide with troubleshooting |
 | **[docs/DESKTOP_APP.md](docs/DESKTOP_APP.md)** | Electron desktop packaging and runtime management |
 | **[docs/DESKTOP_RUNTIME.md](docs/DESKTOP_RUNTIME.md)** | Runtime IPC API and lifecycle documentation |
 | **[docs/WINDOWS_INSTALLER_TEST.md](docs/WINDOWS_INSTALLER_TEST.md)** | Installer smoke test checklist (17 items) |
 | **[docs/RELEASE_PACKAGE.md](docs/RELEASE_PACKAGE.md)** | Build, install, run, uninstall, and logs guide |
 | **[release-notes/0.1.0.md](release-notes/0.1.0.md)** | v0.1.0 release notes |
+| **[docs/EXAMPLE_AGENT_PROMPTS.md](docs/EXAMPLE_AGENT_PROMPTS.md)** | 37 example prompts for testing the agent planner |
