@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { SystemPromptTemplate, ProviderConfigs } from '@aster-code/shared';
 import { apiFetch } from '../api.ts';
+import { resetWelcome, hasDismissedWelcome } from '../components/WelcomeBanner.tsx';
 
 const PROMPTS_STORAGE_KEY = 'aster_system_prompts';
 const SELECTED_PROMPT_KEY = 'aster_selected_prompt_id';
@@ -127,7 +128,13 @@ export default function SettingsScreen({ runtimeConnected, onUpdateConfigs }: Se
   const [runtimeLogs, setRuntimeLogs] = useState<string[]>([]);
   const [showRuntimeLogs, setShowRuntimeLogs] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
+  const [welcomeDismissed, setWelcomeDismissed] = useState(() => hasDismissedWelcome());
   const logsEndRef = useRef<HTMLDivElement>(null);
+
+  const handleResetOnboarding = () => {
+    resetWelcome();
+    setWelcomeDismissed(false);
+  };
 
   // Fetch runtime status from Electron
   const refreshRuntimeStatus = async () => {
@@ -499,6 +506,27 @@ export default function SettingsScreen({ runtimeConnected, onUpdateConfigs }: Se
                 It runs on <code className="bg-ivory-100 px-1 rounded text-[9px]">localhost:3001</code>.
                 In the desktop app, it starts automatically. In the browser, start it with <code className="bg-ivory-100 px-1 rounded text-[9px]">npm run dev:runtime</code>.
               </span>
+            </div>
+
+            {/* Reset onboarding */}
+            <div className="text-[10px] leading-relaxed text-ivory-500 bg-ivory-50/50 p-3 border border-ivory-100 rounded-lg space-y-2">
+              <span className="font-semibold text-ivory-600 block">🔄 First-Run Onboarding</span>
+              {welcomeDismissed ? (
+                <div className="flex items-center justify-between">
+                  <span className="text-ivory-400">Welcome screen was dismissed. Reset it to see again.</span>
+                  <button
+                    onClick={handleResetOnboarding}
+                    className="text-[10px] font-semibold bg-clay/10 text-clay border border-clay/20 hover:bg-clay/20 px-3 py-1 rounded-lg transition-all"
+                  >
+                    Show Again
+                  </button>
+                </div>
+              ) : (
+                <span className="text-emerald-600 flex items-center gap-1">
+                  <RefreshCw className="w-3 h-3" />
+                  Welcome screen will show on next visit
+                </span>
+              )}
             </div>
           </div>
         </div>

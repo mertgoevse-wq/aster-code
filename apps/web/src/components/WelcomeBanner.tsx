@@ -15,12 +15,18 @@ export function dismissWelcome(): void {
   localStorage.setItem(DISMISSED_KEY, 'true');
 }
 
+export function resetWelcome(): void {
+  localStorage.removeItem(DISMISSED_KEY);
+}
+
 interface WelcomeBannerProps {
   runtimeConnected: boolean;
   onTryPrompt: (prompt: string) => void;
+  modelCount?: number;
+  skillCount?: number;
 }
 
-export default function WelcomeBanner({ runtimeConnected, onTryPrompt }: WelcomeBannerProps) {
+export default function WelcomeBanner({ runtimeConnected, onTryPrompt, modelCount = 0, skillCount = 0 }: WelcomeBannerProps) {
   const [visible, setVisible] = useState(!hasDismissedWelcome());
 
   const handleDismiss = () => {
@@ -56,16 +62,30 @@ export default function WelcomeBanner({ runtimeConnected, onTryPrompt }: Welcome
           </p>
 
           {/* Runtime status callout */}
-          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold ${
-            runtimeConnected
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-              : 'bg-amber-50 border-amber-200 text-amber-700'
-          }`}>
-            <span className={`w-2 h-2 rounded-full ${runtimeConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-            {runtimeConnected
-              ? 'Runtime server online — localhost:3001'
-              : 'Runtime server offline — start with npm run dev:runtime'
-            }
+          <div className="flex flex-col items-center gap-2">
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold ${
+              runtimeConnected
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : 'bg-amber-50 border-amber-200 text-amber-700'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${runtimeConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+              {runtimeConnected
+                ? 'Runtime server online — localhost:3001'
+                : 'Runtime server offline — start with npm run dev:runtime'
+              }
+            </div>
+            {runtimeConnected && (
+              <div className="flex gap-4 text-xs text-ivory-500">
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  {modelCount > 0 ? `${modelCount} models` : 'No models'}
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                  {skillCount > 0 ? `${skillCount} skills` : 'No skills'}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -81,12 +101,13 @@ export default function WelcomeBanner({ runtimeConnected, onTryPrompt }: Welcome
             </h2>
             <ul className="space-y-2.5">
               {[
+                { label: 'Desktop shell', desc: 'Electron window, auto-start runtime' },
+                { label: 'Runtime server', desc: 'Express API on localhost:3001, SSE events' },
                 { label: 'Agent plan generation', desc: 'Classifies tasks, builds safe execution plans' },
                 { label: 'Skill routing', desc: 'Matches intent to 8 built-in agent skills' },
                 { label: 'Workbench UI', desc: 'File tree, editor, terminal & preview panels' },
                 { label: 'Model registry', desc: 'Mock adapter foundation for 5 providers' },
-                { label: 'Runtime server', desc: 'Express API on localhost:3001, SSE events' },
-                { label: 'Desktop shell', desc: 'Electron window, auto-start runtime' },
+                { label: 'System prompt library', desc: 'Create, edit, and manage AI prompt templates' },
               ].map(item => (
                 <li key={item.label} className="flex items-start gap-2.5">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
@@ -112,6 +133,7 @@ export default function WelcomeBanner({ runtimeConnected, onTryPrompt }: Welcome
                 { label: 'Real command execution', desc: 'Run approved commands in terminal' },
                 { label: 'Real MCP connections', desc: 'Connect to MCP servers for tool access' },
                 { label: 'Persistent sessions', desc: 'Save & resume agent sessions across restarts' },
+                { label: 'OAuth completion', desc: 'GitHub/Google login, cloud sync, remote projects' },
               ].map(item => (
                 <li key={item.label} className="flex items-start gap-2.5">
                   <Clock className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />

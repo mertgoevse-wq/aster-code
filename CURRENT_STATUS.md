@@ -128,3 +128,7 @@ aster-code/
 | 19 | `test:desktop` passes? | ✅ Yes — 8/8 desktop package checks |
 | 20 | `test:smoke` passes? | ✅ Yes — all 4 suites pass (runtime skipped offline) |
 | 21 | Repo hygiene checks? | ✅ Yes — no .env leaks, .gitignore covers sensitive dirs |
+| 22 | Onboarding model/skill status? | ✅ Yes — model count + skill count in welcome banner |
+| 23 | Reset onboarding from Settings? | ✅ Yes — "Show Again" button in Settings > Runtime Server |
+| 24 | What Works Now has 7 items? | ✅ Yes — desktop, runtime, agent, skills, workbench, models, prompts |
+| 25 | Coming Next has 6 items? | ✅ Yes — LLM, file edits, commands, MCP, sessions, OAuth |

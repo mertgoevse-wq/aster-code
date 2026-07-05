@@ -1,4 +1,4 @@
-# Aster Code v0.1.0 Automated Smoke Tests Build Report
+# Aster Code v0.1.0 First-Run Onboarding Build Report
 
 Date: 2026-07-05
 Status: SUCCESS — All builds + smoke tests pass

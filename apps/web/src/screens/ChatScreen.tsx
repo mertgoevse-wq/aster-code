@@ -11,9 +11,11 @@ import { apiFetch } from '../api.ts';
 interface ChatScreenProps {
   selectedModelId: string;
   runtimeConnected: boolean;
+  modelCount?: number;
+  skillCount?: number;
 }
 
-export default function ChatScreen({ selectedModelId: _selectedModelId, runtimeConnected }: ChatScreenProps) {
+export default function ChatScreen({ selectedModelId: _selectedModelId, runtimeConnected, modelCount, skillCount }: ChatScreenProps) {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [events, setEvents] = useState<AgentEvent[]>([]);
@@ -254,6 +256,8 @@ export default function ChatScreen({ selectedModelId: _selectedModelId, runtimeC
           <WelcomeBanner
             runtimeConnected={runtimeConnected}
             onTryPrompt={(prompt) => handleSend(prompt)}
+            modelCount={modelCount}
+            skillCount={skillCount}
           />
         )}
 

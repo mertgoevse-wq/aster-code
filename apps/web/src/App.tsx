@@ -205,7 +205,7 @@ export default function App() {
   const renderActiveScreen = () => {
     switch (activeTab) {
       case 'chat':
-        return <ChatScreen selectedModelId={selectedModelId} runtimeConnected={runtimeConnected} />;
+        return <ChatScreen selectedModelId={selectedModelId} runtimeConnected={runtimeConnected} modelCount={models.length} skillCount={8} />;
       case 'workbench':
         return <WorkbenchScreen runtimeConnected={runtimeConnected} />;
       case 'models':
